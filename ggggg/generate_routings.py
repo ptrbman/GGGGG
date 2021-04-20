@@ -103,9 +103,7 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
     outfile = "routings"
     systems = []
     for opt in allOptions:
-        print("New option")
         number += 1
-        print("OPTION>> ", opt)
         rts = []
         for i in range(0, len(slices)):
             curRouting = []

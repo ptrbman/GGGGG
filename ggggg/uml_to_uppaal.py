@@ -7,7 +7,7 @@ import re
 from ggggg.fiveg import *
 
 
-def LoadSystem(infile, verbose=True):
+def LoadSystem(infile, verbose=False):
     # This is used for verbose mode
     def dprint(str):
         if (verbose):

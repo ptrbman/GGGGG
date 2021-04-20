@@ -373,11 +373,9 @@ while True:
 
     ### GENERATE ROUTINGS ###
     elif event == 'btnGenerateRoutings':
-        print("GEN ROUTINGS")
-
         sysdict = LoadSystem(values['InstanceFile'])
         systems = AllRoutings(sysdict, int(values['txtExecutors']), int(values['txtQueue']))
-        print("FOUND ", len(systems), " SYSTEMS")
+
         modelName = os.path.splitext(os.path.basename(values['InstanceFile']))[0]
         if not os.path.exists('models/' + modelName):
             os.makedirs('models/' + modelName)
@@ -388,7 +386,6 @@ while True:
             filename = prefix + "_" + str(i) + ".xml"
             f = open(filename, "w")
             f.write(s)
-            print("\tWrote file: ", filename)
             i = i + 1
 
 

@@ -8,7 +8,6 @@ def escape_ansi(line):
 
 def runUPPAAL(verifytaLocation, infile, queryfile, outputfile, verbose=False):
     cmd = "\"" + verifytaLocation + "\" \"" + str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
-    print(cmd)
     os.system(cmd)
 
     f = open(outputfile, "r")
