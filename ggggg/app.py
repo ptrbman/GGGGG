@@ -176,7 +176,7 @@ layout = [
     [sg.Text('Load Instance', font=header_font)],
     [sg.Input('', key='InstanceFile', enable_events=True, visible=False, font=font),
      sg.FileBrowse(button_text="Load Instance", font=font, initial_folder=deffolder, target='InstanceFile'),
-     sg.Text('Instance name:', font=font), sg.Text('n/a', key='labelInstanceName', size=(50,1), font=font)],
+     sg.Text('Instance name:', font=font), sg.Text('n/a', key='labelInstanceName', size=(30,1), font=font)],
 
     [sep(100)],
 
@@ -194,14 +194,11 @@ layout = [
      sg.Input('2', key='txtExecutors', font=font, size=(4,1), disabled=True),
      sg.Text("Message Queue Length: ", key="labelQueue", text_color='gray', font=font),
      sg.Input('3', key='txtQueue', disabled=True, font=font, size=(4,1))],
-
-
     [sg.TabGroup([[sg.Tab('Verification', main_layout),
                    sg.Tab('Routings', routings_layout),
                    sg.Tab('Settings', settings_layout)]],
                        tab_background_color='white',
                        background_color='white',
-                       # selected_title_color='white',
                        selected_background_color='blue')]]
 
 window = sg.Window('GGGGG', layout)
