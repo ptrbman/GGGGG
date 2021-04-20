@@ -1,4 +1,5 @@
-# GGGGG
+![GGGGG](https://raw.githubusercontent.com/ptrbman/ggggg/master/ggggg/resources/logo.png)
+
 Simple tool for transforming 5G UML models to UPPAAL models.
 
 # Installation 
