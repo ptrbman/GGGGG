@@ -30,11 +30,28 @@ window = ""
 # These are used as standard values upon startup.
 deffolder = os.getcwd() + '/instances/'
 
-# This is used as the (temporary) UPPAAL model file
-tmpfile = "debug.xml"
+#
+#  BINARY LOCATIONS
+#
 
-uppaalLocation = '/Applications/uppaal64-4.1.24/uppaal'
-verifytaLocation = '/Applications/uppaal64-4.1.24/bin-Darwin/verifyta'
+uppaalLocation = ''
+verifytaLocation = ''
+
+def loadConfig():
+    global uppaalLocation
+    global verifytaLocation
+    f = open("config.txt", "r")
+    uppaalLocation = f.readline().strip()
+    verifytaLocation = f.readline().strip()
+    f.close()
+
+loadConfig()
+
+def saveConfig():
+    f = open("config.txt", "w")
+    f.write(uppaalLocation +"\n")
+    f.write(verifytaLocation +"\n")
+    f.close()
 
 #
 #  QUERY
@@ -140,12 +157,12 @@ main_layout = [
 
 settings_layout = [
     [sg.Text("Settings", font=header_font)],
-    [sg.Text("UPPAAL Location", font=font),
-     sg.Input(uppaalLocation, key='uppaalLocation', font=font),
-     sg.FileBrowse(button_text="Browse", font=font, target='uppaalLocation')],
-    [sg.Text("verifyta Location", font=font),
-     sg.Input(verifytaLocation, key='verifytaLocation', font=font),
-     sg.FileBrowse(button_text="Browse", font=font, target='verifytaLocation')]
+    [sg.Text("UPPAAL Location", font=font)],
+     [sg.Input(uppaalLocation, key='uppaalLocation', font=font, enable_events=True),
+     sg.FileBrowse(button_text="Browse", font=font, target='uppaalLocation', initial_folder=uppaalLocation)],
+    [sg.Text("verifyta Location", font=font)],
+     [sg.Input(verifytaLocation, key='verifytaLocation', font=font, enable_events=True),
+     sg.FileBrowse(button_text="Browse", font=font, target='verifytaLocation', initial_folder=verifytaLocation)]
 ]
 
 routings_layout = [
@@ -180,8 +197,8 @@ layout = [
 
 
     [sg.TabGroup([[sg.Tab('Verification', main_layout),
-                         sg.Tab('Settings', settings_layout),
-                   sg.Tab('Routings', routings_layout)]],
+                   sg.Tab('Routings', routings_layout),
+                   sg.Tab('Settings', settings_layout)]],
                        tab_background_color='white',
                        background_color='white',
                        # selected_title_color='white',
@@ -252,11 +269,10 @@ def set_stage(stage):
         window['btnExecutor'].update(disabled=False)
         window['btnMonitor'].update(disabled=False)
         window['btnRerouting'].update(disabled=False)
- 
+
 
 
 def load_instance(infile):
-    tmpfile = "debug.xml"
     instanceName = os.path.splitext(os.path.basename(infile))[0]
     window['labelInstanceName'].update(instanceName)
     sysdict = LoadSystem(infile) 
@@ -378,6 +394,18 @@ while True:
             print("\tWrote file: ", filename)
             i = i + 1
 
+
+    ### CHANGE UPPAALLOCATION
+    elif event == 'uppaalLocation':
+        if (values['uppaalLocation'] != ''):
+            uppaalLocation = values['uppaalLocation']
+            saveConfig()
+
+    ### CHANGE VERIFYTALOCATION
+    elif event == 'verifytaLocation':
+        if (values['verifytaLocation'] != ''):
+            verifytaLocation = values['verifytaLocation']
+            saveConfig()
 
     ### UNRECOGNIZED EVENT ###
     else:

@@ -1,0 +1,2 @@
+/Applications/uppaal64-4.1.24/uppaal
+/Applications/uppaal64-4.1.24/bin-Darwin/verifyta
