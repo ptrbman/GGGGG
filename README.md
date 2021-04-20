@@ -36,6 +36,8 @@ Start the program by running the following in the root directory of the applicat
 python -m ggggg
 ```
 
+![GGGGG Window](https://raw.githubusercontent.com/ptrbman/ggggg/master/ggggg/resources/screenshot.png)
+
 ## First time
 In the settings tab you must select the location of the `verifyta` and `uppaal` binaries of the UPPAAL tool.
 
