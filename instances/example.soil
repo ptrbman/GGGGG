@@ -1,0 +1,48 @@
+!new Host('Host1')
+!Host1.CPUResources := 10000
+!Host1.StorageResources := 1000
+!Host1.MECHost := false
+!Host1.Capabilities := Set{'VNF'}
+!new Host('Host2')
+!Host2.CPUResources := 10000
+!Host2.StorageResources := 1000
+!Host2.MECHost := false
+!Host2.Capabilities := Set{'VNF'}
+!new VNF('VNF1')
+!VNF1.Type := 'VNF'
+!VNF1.BCET := 2
+!VNF1.WCET := 5
+!VNF1.Priority := 1
+!insert (VNF1,Host2) into Allocation
+!new VNF('VNF2')
+!VNF2.Type := 'VNF'
+!VNF2.BCET := 2
+!VNF2.WCET := 5
+!VNF2.Priority := 1
+!insert (VNF2,Host2) into Allocation
+!insert (Host2,Host1) into pLink
+!pLink1.Delay := 5
+!pLink1.Bandwidth := 500
+!new Slice('Slice1')
+!Slice1.BWRequirement := 250
+!Slice1.LatencyRequirement := 50
+!Slice1.VNFs := Sequence {VNF1,VNF2}
+!insert (Host2,Host2) into vLink
+!vLink1.Links := Sequence {}
+!Slice1.Routing := Sequence {vLink1}
+!new UserEquipment('UserEquipment1')
+!UserEquipment1.MaxInstantiation := 2
+!UserEquipment1.ActivationTime := 25
+!insert (UserEquipment1,Slice1) into Subscription
+!new UserEquipment('UserEquipment2')
+!UserEquipment2.MaxInstantiation := 2
+!UserEquipment2.ActivationTime := 25
+!insert (UserEquipment2,Slice1) into Subscription
+!new UserEquipment('UserEquipment3')
+!UserEquipment3.MaxInstantiation := 2
+!UserEquipment3.ActivationTime := 25
+!insert (UserEquipment3,Slice1) into Subscription
+!new UserEquipment('UserEquipment4')
+!UserEquipment4.MaxInstantiation := 2
+!UserEquipment4.ActivationTime := 25
+!insert (UserEquipment4,Slice1) into Subscription

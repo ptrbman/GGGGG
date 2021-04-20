@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>//
+// Structures
+//
+
+// VNF
+typedef struct {
+    int id;
+    int BCET; // Best Case Execution Time
+    int WCET; // Worst Case Execution Time
+    int Prio; // Priority
+} vnf;
+
+// Link
+typedef struct{
+    int id;
+    int [0,1000] BW;
+    int delay;
+} link;
+
+// Host
+typedef struct {
+    int id;
+    int CPU_Res;
+    int Storage_Res;
+    bool MECHost;
+} host;
+
+// Slice
+typedef struct {
+    int id;
+    int BWReq;
+    int LatReq;
+    int chainLength;
+} slice;
+
+
+//
+// The actual system specification --- We should gather here all variables/constants which are instance-specific, i.e., the code that must be generated.
+//
+
+// --SYSTEM--
+
+//
+// Auxilliary things --- Things which are needed by the model.
+//
+
+
+urgent chan execute; // Generator generating the exceute signal and synchronises with the host, such that the host dont stay in idle location forever
+chan done[ExecutorCount];
+chan request, reqExe;
+int lastRequestSliceId;
+int MQ[HostCount][QueueLength][2]; // First element contains the id of the VNF, second element the id of the corresponding SliceExecutioner
+int [0, QueueLength] len[HostCount]; //Length of the message queues of the host 
+//
+// Functions
+//
+
+void queue(int hostID, int vnfID, int exeID) //Queue Function
+{
+    if (len[hostID] &lt; QueueLength)
+    {
+        MQ[hostID][len[hostID]][0] = vnfID;
+        MQ[hostID][len[hostID]][1] = exeID;
+        len[hostID]++;
+
+    }
+ else 
+    {
+        int x=1/0;
+        
+    }
+}
+
+
+
+
+
+</declaration>
+	<template>
+		<name>Monitor</name>
+		<parameter>int MId</parameter>
+		<declaration>clock x;
+int sliceID;</declaration>
+		<location id="id0" x="-569" y="-51">
+			<name x="-579" y="-85">Idle</name>
+		</location>
+		<location id="id1" x="-136" y="-51">
+			<name x="-146" y="-85">Wait</name>
+		</location>
+		<location id="id2" x="42" y="-51">
+			<name x="34" y="-85">MissedDeadline</name>
+		</location>
+		<location id="id3" x="-314" y="-51">
+			<committed/>
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id1"/>
+			<label kind="synchronisation" x="-238" y="-76">reqExe!</label>
+			<nail x="-195" y="-51"/>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-136" y="-42">x&gt;=slices[sliceID].LatReq</label>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id3"/>
+			<label kind="synchronisation" x="-545" y="-76">request?</label>
+			<label kind="assignment" x="-561" y="-42">x=0, AvailableMonitors=AvailableMonitors-1</label>
+		</transition>
+	</template>
+	<template>
+		<name>Host</name>
+		<parameter>int id</parameter>
+		<declaration>clock x;
+
+vnf scheduledVNF;
+int scheduledExe;
+
+void schedule() // Priority-based scheduling
+{
+    int i, j, tmp0, tmp1;
+    for(i = 0; i &lt; QueueLength; i++) // TODO: Is it i &lt; 1 (one) here? Then this loop is only executed once?
+    {
+        for (j = i + 1; j &lt; QueueLength; j++) 
+        { 
+            if (len[id]&gt;=1)
+            {
+                if (vnfs[MQ[id][i][0]].Prio &lt; vnfs[MQ[id][j][0]].Prio)
+                {    
+                    tmp0 = MQ[id][i][0];
+                    tmp1 = MQ[id][i][1];
+                    MQ[id][i][0] = MQ[id][j][0];
+                    MQ[id][i][1] = MQ[id][j][1];
+                    MQ[id][j][0] = tmp0;
+                    MQ[id][j][1] = tmp1;
+                }
+            }
+        }
+    }
+}
+
+void dequeue() // dequeing the host
+{  
+    scheduledVNF = vnfs[MQ[id][0][0]];
+    scheduledExe = MQ[id][0][1];
+
+    if (len[id] &gt;= 1)
+    {
+        int i = 0;
+        len[id] = len[id] - 1;
+        while(i &lt; len[id])
+        {
+            MQ[id][i][0] = MQ[id][i+1][0];
+            MQ[id][i][1] = MQ[id][i+1][1];
+            i++;
+        }
+        MQ[id][i][0] = 0;
+        MQ[id][i][1] = 0;
+    }
+}
+
+</declaration>
+		<location id="id4" x="-272" y="17">
+			<name x="-297" y="34">Select</name>
+			<committed/>
+		</location>
+		<location id="id5" x="-484" y="17">
+			<name x="-501" y="34">Idle</name>
+		</location>
+		<location id="id6" x="-59" y="17">
+			<name x="-85" y="34">Execute</name>
+			<label kind="invariant" x="-102" y="51">x &lt;= scheduledVNF.WCET</label>
+		</location>
+		<init ref="id5"/>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-323" y="-144">x &gt;= scheduledVNF.BCET</label>
+			<label kind="synchronisation" x="-323" y="-127">done[scheduledExe]!</label>
+			<label kind="assignment" x="-323" y="-110">x = 0</label>
+			<nail x="-59" y="-85"/>
+			<nail x="-484" y="-85"/>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id6"/>
+			<label kind="assignment" x="-229" y="-42">x=0,
+dequeue()</label>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-391" y="-51">len[id] != 0</label>
+			<label kind="synchronisation" x="-391" y="-34">execute?</label>
+			<label kind="assignment" x="-391" y="-17">schedule()</label>
+		</transition>
+	</template>
+	<template>
+		<name>UserEquipment</name>
+		<parameter>int id, int sliceID, int maxInstant, int activationTime</parameter>
+		<declaration>clock x; // Clock To measure Activation Time
+
+int numberOfRequests = 0; //Number of requests of each slice respectively</declaration>
+		<location id="id7" x="-348" y="-68">
+			<name x="-382" y="-102">Idle</name>
+		</location>
+		<location id="id8" x="76" y="-68">
+			<name x="102" y="-76">start</name>
+			<label kind="invariant" x="17" y="-51">x &lt;= activationTime</label>
+		</location>
+		<location id="id9" x="76" y="-170">
+			<committed/>
+		</location>
+		<location id="id10" x="153" y="-280">
+			<name x="143" y="-314">NoFreeExecutor</name>
+		</location>
+		<location id="id11" x="229" y="-51">
+			<name x="219" y="-85">NoFreeMonitor</name>
+		</location>
+		<init ref="id7"/>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id11"/>
+			<label kind="guard" x="93" y="-136">AvailableMonitors==0</label>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id10"/>
+			<label kind="guard" x="93" y="-229">AvailableExecutors == 0</label>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-85" y="-127">x == activationTime</label>
+		</transition>
+		<transition>
+			<source ref="id9"/>
+			<target ref="id7"/>
+			<label kind="guard" x="-314" y="-272">AvailableExecutors &gt; 0</label>
+			<label kind="synchronisation" x="-314" y="-255">request!</label>
+			<label kind="assignment" x="-314" y="-238">numberOfRequests++,
+lastRequestSliceId = sliceID,
+x = 0</label>
+			<nail x="-135" y="-170"/>
+			<nail x="-348" y="-170"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-297" y="-34">numberOfRequests &lt; maxInstant</label>
+			<label kind="synchronisation" x="-297" y="-68">execute?</label>
+			<label kind="assignment" x="-297" y="-51">x = 0</label>
+		</transition>
+	</template>
+	<template>
+		<name>Generator</name>
+		<location id="id12" x="-17" y="-34">
+		</location>
+		<init ref="id12"/>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id12"/>
+			<label kind="synchronisation" x="-153" y="-76">execute!</label>
+			<nail x="-128" y="-111"/>
+			<nail x="-119" y="8"/>
+		</transition>
+	</template>
+	<template>
+		<name>Executor</name>
+		<parameter>int exeID</parameter>
+		<declaration>// TODO: There could be a problem with slice consiting of only one VNF.
+
+clock x; // to measure link delay
+clock monitor; // clock to measure the deadline
+
+int sliceID;
+int sliceInst = 0; // current slice execution instance
+int vnfid = 0; //current vnf id
+
+bool rq = false; // to monitor UE request generation
+bool rqComplete=false; // to monitor UE request completion
+
+int delay; // delay of links
+
+
+// step is equal to the current VNF being executed
+// and is one ahead of the current routing step
+// i.e., routingstep = step - 1
+// This is due to that there will always be exactly
+// one more vnf than routing steps.
+
+int step = 0;
+int ls=0; //current link step
+
+int localRT[MaxChainLength][MaxLinkStep];//current RT
+
+// TODO: MaxNvnfs is a confusing name
+int sliceChain[VNFCount]; // currentSliceChain
+
+
+// Copy Slice Chain and Routing Table
+void initialize()
+{
+    int i, j;
+    for (i = 0; i &lt; MaxChainLength; i++) 
+    {
+        for (j = 0; j &lt; MaxLinkStep; j++)
+        {
+            localRT[i][j] = RT[sliceID][i][j];
+        }
+    }
+
+    for (i=0; i &lt; slices[sliceID].chainLength; i++)
+    {
+        sliceChain[i] = SliceChains[sliceID][i];
+    }
+    step = 0;
+}
+
+                
+void queueVNFtoHost() //Queue the respective vnf to the host where is it allocated 
+{
+    int nextVNF = sliceChain[step];
+       
+                {
+                    queue(AllocV[nextVNF], nextVNF, exeID);
+                    vnfid = nextVNF;
+                    
+
+                }
+
+        
+}
+
+void computeDelay() //calculate link delay in routing
+{
+    int i;
+    delay = 0;
+    for (i = 0; i &lt; MaxLinkStep; i++)
+    {
+        int ll = localRT[step - 1][i];
+        if (ll != -1)
+            delay += links[ll].delay;
+    }
+}
+
+bool checkBW() 
+{
+    int i;
+    for (i = 0; i &lt; MaxLinkStep; i++)
+    {
+        int ll = localRT[step - 1][i];
+
+        if (ll != -1)
+            if (links[ll].BW &lt; slices[sliceID].BWReq)
+                return false;
+    }
+    return true;
+}
+
+void requestBW() //request link bw
+{
+    int i;
+    for (i = 0; i &lt; MaxLinkStep; i++)
+    {
+        int ll = localRT[step - 1][i];
+
+        if (ll != -1)
+            links[ll].BW -= slices[sliceID].BWReq;
+    }
+}
+
+
+void releaseBW() //release link bw
+{
+    int i;
+    for (i = 0; i &lt; MaxLinkStep; i++)
+    {
+        int ll = localRT[step - 1][i];
+
+        if (ll != -1)
+            links[ll].BW += slices[sliceID].BWReq;
+    }
+}
+ 
+</declaration>
+		<location id="id13" x="-501" y="25">
+			<name x="-511" y="-9">Idle</name>
+		</location>
+		<location id="id14" x="-340" y="25">
+			<committed/>
+		</location>
+		<location id="id15" x="255" y="17">
+			<name x="272" y="-8">WaitForLink</name>
+			<label kind="invariant" x="272" y="9">x &lt;= delay</label>
+		</location>
+		<location id="id16" x="-119" y="25">
+			<name x="-161" y="-8">WaitForHost</name>
+		</location>
+		<location id="id17" x="-722" y="25">
+			<name x="-732" y="-9">ReqCom</name>
+			<committed/>
+		</location>
+		<location id="id18" x="68" y="161">
+			<name x="8" y="187">FinishedExecuting</name>
+		</location>
+		<location id="id19" x="-340" y="161">
+			<committed/>
+		</location>
+		<location id="id20" x="314" y="161">
+			<name x="280" y="127">NeedRerouting</name>
+		</location>
+		<location id="id21" x="-42" y="-119">
+			<name x="-51" y="-153">ErrorQueueFull</name>
+		</location>
+		<init ref="id13"/>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id21"/>
+			<label kind="guard" x="-34" y="-102">len[AllocV[sliceChain[step]]] &gt;= QueueLength</label>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id21"/>
+			<label kind="guard" x="-322" y="-81">len[AllocV[sliceChain[step]]] &gt;= QueueLength</label>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id20"/>
+			<label kind="guard" x="42" y="170">step &lt; slices[sliceID].chainLength and checkBW()==false and monitor&gt;=slices[sliceID].LatReq</label>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-297" y="136">step == slices[sliceID].chainLength</label>
+			<label kind="synchronisation" x="-255" y="170">execute?</label>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id15"/>
+			<label kind="guard" x="42" y="51">step &lt; slices[sliceID].chainLength and checkBW()</label>
+			<label kind="synchronisation" x="42" y="34">execute?</label>
+			<label kind="assignment" x="42" y="68">requestBW(),
+computeDelay(),
+x=0</label>
+		</transition>
+		<transition>
+			<source ref="id14"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-425" y="34">len[AllocV[sliceChain[step]]] &lt; QueueLength</label>
+			<label kind="assignment" x="-289" y="0">queueVNFtoHost()</label>
+		</transition>
+		<transition>
+			<source ref="id17"/>
+			<target ref="id13"/>
+			<label kind="assignment" x="-697" y="34">monitor=0,
+AvailableExecutors=AvailableExecutors+1</label>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id18"/>
+			<label kind="synchronisation" x="-221" y="102">done[exeID]?</label>
+			<label kind="assignment" x="-221" y="85">step = step + 1</label>
+		</transition>
+		<transition>
+			<source ref="id19"/>
+			<target ref="id17"/>
+			<label kind="guard" x="-680" y="161">monitor&lt;=slices[sliceID].LatReq</label>
+			<label kind="assignment" x="-569" y="127">rqComplete = true</label>
+			<nail x="-348" y="161"/>
+			<nail x="-722" y="161"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-25" y="-34">x==delay &amp;&amp; len[AllocV[sliceChain[step]]] &lt; QueueLength</label>
+			<label kind="assignment" x="-25" y="-17">releaseBW(),
+queueVNFtoHost()</label>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id14"/>
+			<label kind="synchronisation" x="-459" y="-85">reqExe?</label>
+			<label kind="assignment" x="-484" y="-68">rq = true, 
+monitor = 0, 
+sliceID = lastRequestSliceId,
+initialize(),
+AvailableExecutors=AvailableExecutors-1</label>
+		</transition>
+	</template>
+	<system>
+
+// --INSTANCE--
+
+</system>
+	<queries>
+		<query>
+			<formula>A[] not UE0.NoFreeExecutor</formula>
+			<comment></comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt;E1.rq==true </formula>
+			<comment></comment>
+		</query>
+	</queries>
+</nta>
