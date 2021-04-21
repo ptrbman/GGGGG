@@ -37,6 +37,7 @@ deffolder = os.getcwd() + '/instances/'
 uppaalLocation = ''
 verifytaLocation = ''
 
+# Loqd "config.txt" and grab binary locations
 def loadConfig():
     global uppaalLocation
     global verifytaLocation
@@ -47,6 +48,7 @@ def loadConfig():
 
 loadConfig()
 
+# Save binary locations to config.txt
 def saveConfig():
     f = open("config.txt", "w")
     f.write(uppaalLocation +"\n")
@@ -152,17 +154,16 @@ main_layout = [
     [sg.Button('Check No Need Rerouting', key='btnRerouting', disabled=True),
      sg.Text("Not checked", key='labelRerouting', text_color='gray', font=font),
      sg.Input('hmm', key="txtReroutingQuery", visible=False)]
-
 ]
 
 settings_layout = [
     [sg.Text("Settings", font=header_font)],
     [sg.Text("UPPAAL Location", font=font)],
-     [sg.Input(uppaalLocation, key='uppaalLocation', font=font, enable_events=True),
+    [sg.Input(uppaalLocation, key='uppaalLocation', font=font, enable_events=True),
      sg.FileBrowse(button_text="Browse", font=font, target='uppaalLocation', initial_folder=uppaalLocation)],
     [sg.Text("verifyta Location", font=font)],
      [sg.Input(verifytaLocation, key='verifytaLocation', font=font, enable_events=True),
-     sg.FileBrowse(button_text="Browse", font=font, target='verifytaLocation', initial_folder=verifytaLocation)]
+      sg.FileBrowse(button_text="Browse", font=font, target='verifytaLocation', initial_folder=verifytaLocation)]
 ]
 
 routings_layout = [
@@ -190,7 +191,7 @@ layout = [
 
     [sep(100)],
 
-[sg.Text("Executors/Monitors: ", key="labelExecutorMonitor", text_color='gray', font=font),
+    [sg.Text("Executors/Monitors: ", key="labelExecutorMonitor", text_color='gray', font=font),
      sg.Input('2', key='txtExecutors', font=font, size=(4,1), disabled=True),
      sg.Text("Message Queue Length: ", key="labelQueue", text_color='gray', font=font),
      sg.Input('3', key='txtQueue', disabled=True, font=font, size=(4,1))],
@@ -198,12 +199,12 @@ layout = [
                    sg.Tab('Routings', routings_layout),
                    sg.Tab('Settings', settings_layout)]],
                        tab_background_color='white',
-                       background_color='white',
-                       selected_background_color='blue')]]
+                 background_color='white',
+                 selected_background_color='blue')]]
 
 window = sg.Window('GGGGG', layout)
 
-## Enables widgets and changes text color depending on what stage in the process the user is infd
+## Enables widgets and changes text color depending on what stage in the process the user is
 def set_stage(stage):
     if stage == 1:
         window['labelInstance'].update(text_color=textColor)
@@ -248,9 +249,6 @@ def set_stage(stage):
         window['btnRerouting'].update(disabled=True)
         window['btnQueues'].update(disabled=True)
 
-
-
-
     if stage == 2:
         window['Preview'].update(disabled=False)
         window['labelVerify'].update(text_color=textColor)
@@ -267,8 +265,7 @@ def set_stage(stage):
         window['btnMonitor'].update(disabled=False)
         window['btnRerouting'].update(disabled=False)
 
-
-
+# Loads instance infile and updates info accordingly
 def load_instance(infile):
     instanceName = os.path.splitext(os.path.basename(infile))[0]
     window['labelInstanceName'].update(instanceName)
@@ -280,6 +277,7 @@ def load_instance(infile):
     window['txtLinks'].update(str(len(sysdict['Links'])))
     set_stage(1)
 
+# Generate a UPPAAL model from instance in infile with executors and queueLength
 def generate_uppaal(infile, executors, queueLength):
     modelName = os.path.splitext(os.path.basename(infile))[0]
     uppaalFile = os.getcwd() + '/models/' + modelName + '.xml'
@@ -295,17 +293,18 @@ def generate_uppaal(infile, executors, queueLength):
     window['txtUPPAALFile'].update(value=uppaalFile)
     set_stage(2)
 
-def preview(uppaalfile, modelFile):
+# Opens UPPAAL to study file modelFile
+def preview(uppaalLocation, modelFile):
     currentDir = os.getcwd()
-    uppaalDir = os.path.dirname(uppaalfile)
+    uppaalDir = os.path.dirname(uppaalLocation)
     os.chdir(uppaalDir)
     uppaalCmd = "./uppaal"
     cmd = uppaalCmd + " \"" + modelFile + "\""
-    # cmd = "\"" + uppaalCmd + "\"" # \"" //+ str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
     os.system(cmd)
     os.chdir(currentDir)
 
 
+# Run UPPAAL using query
 def verify(uppaalfile, query, queryfile):
     outputfile = os.getcwd() + '/tmp/' + 'tmp'
     answers = runUPPAAL(values['verifytaLocation'], uppaalfile, queryfile, outputfile)
@@ -369,13 +368,12 @@ while True:
         queryfile = values['txtReroutingQuery']
         verify(uppaalfile, "Rerouting", queryfile)
 
-
-
     ### GENERATE ROUTINGS ###
     elif event == 'btnGenerateRoutings':
         sysdict = LoadSystem(values['InstanceFile'])
         systems = AllRoutings(sysdict, int(values['txtExecutors']), int(values['txtQueue']))
 
+        # Create directory in models/ to put results in if not exists
         modelName = os.path.splitext(os.path.basename(values['InstanceFile']))[0]
         if not os.path.exists('models/' + modelName):
             os.makedirs('models/' + modelName)
@@ -387,7 +385,6 @@ while True:
             f = open(filename, "w")
             f.write(s)
             i = i + 1
-
 
     ### CHANGE UPPAALLOCATION
     elif event == 'uppaalLocation':

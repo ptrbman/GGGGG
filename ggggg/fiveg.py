@@ -1,3 +1,7 @@
+# Classes to represent a 5G system. Methods to convert to UPPAAL.
+# t-functions are used in creation of UPPAL models.
+
+
 class VNF:
     def __init__(self, i, uid, BCET=-1, WCET=-1, Prio=-1):
         self.i = i
@@ -31,9 +35,6 @@ class Link:
         self.bw = bw
         self.delay = delay
 
-    def str(self):
-        return "Link from " + str(self.begin) + " to " + str(self.end)
-
     def t(self):
         return "{" + str(self.uid) + ", " + str(self.bw) + ", " + str(self.delay) + "}"
 
@@ -46,7 +47,6 @@ class Route:
     def len(self):
         return len(self.route)
 
-    # TODO: Don't we need padding here?
     def t(self, maxLinkStep):
         unpadded = list(map(lambda r : str(r.uid), self.route))
         padding = (['-1']*(maxLinkStep - len(unpadded)))
@@ -59,7 +59,6 @@ class UserEquipment:
         self.maxInst = maxInst
         self.actTime = actTime,
         self.subscribedSlice = subscribedSlice
-
 
 class Slice:
     def __init__(self, i, uid, bw=-1, lat=-1, chainLength=-1):
@@ -79,7 +78,7 @@ class RoutingTable:
 
     def maxLinkStep(self):
         if not self.routingtable:
-            # TODO: We need 1 here, otherwise we generate a zero-length array in UPPAAL
+            # We need 1 here, otherwise we generate a zero-length array in UPPAAL
             return 1
         else:
             res = max(map(lambda rs : rs.len(), self.routingtable))
@@ -87,9 +86,6 @@ class RoutingTable:
                 return 1
             else:
                 return res
-
-    def print(self):
-        return self.routingtable[0].route
 
     def t(self, maxChainLength, maxLinkStep):
         maxRouteLength = maxChainLength
@@ -123,16 +119,14 @@ class Allocation:
         return "{" + ', '.join(list(map(lambda c : str(c), l))) + "}"
 
 
-
-
-
+# (Very) simple error checking of systems before outputting them
 def checkSystem(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount):
     if (not slices):
         return "No slices defined"
     else:
         return ""
 
-
+# Gives the SYSTEM part to be inserted into template
 def systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount):
     maxChainLength = max(map(lambda c : c.len(), chains))
     maxLinkStep = max(map(lambda r : r.maxLinkStep(), routing))
@@ -157,6 +151,7 @@ def systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength
 
 
 
+# Gives the INSTANCE part to be inserted into template
 def instantiationString(hosts, userEquipments, executionCount):
     allTAs = "system "
     hostsString = ""
@@ -166,7 +161,7 @@ def instantiationString(hosts, userEquipments, executionCount):
         hostsString = hostsString + "\n" + "Host" + str(i) + " = Host(" + str(i) + ");"
         allTAs = allTAs + "Host" + str(i) + ", "
         i = i + 1
-# int id, int sliceID, int maxInstant, int activationTime
+
     uesString = ""
     i = 0
     for ue in userEquipments:
@@ -185,13 +180,13 @@ def instantiationString(hosts, userEquipments, executionCount):
         monitorString = monitorString + "\n" + "M" + str(i) + " = Monitor(" + str(i) + ");"
         allTAs = allTAs + "M" + str(i) + ", "
 
-
-
     allTAs = allTAs + " Generator;"
 
     return hostsString + "\n\n" + uesString + "\n\n" + executorString + "\n\n" + monitorString + "\n\n" + allTAs + "\n\n"
 
 
+
+# Gives a complete string for a UPPAAL model consisting of all the parameters
 def generateSystem(hosts, vnfs, links, slices, chains, alloc, routing, userEquipments, queueLength, executorCount):
     sysStr = systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount)
     instStr = instantiationString(hosts, userEquipments, executorCount)
@@ -200,20 +195,5 @@ def generateSystem(hosts, vnfs, links, slices, chains, alloc, routing, userEquip
     fullString = ''.join(template)
     fullString = fullString.replace('// --SYSTEM--', sysStr)
     fullString = fullString.replace('// --INSTANCE--', instStr)
-    # prefixFile = open("prefix.txt", "r")
-    # prefix = ''.join(prefixFile)
-    # infixFile = open("infix.txt", "r")
-    # infix = ''.join(infixFile)
-    # suffixFile = open("suffix.txt", "r")
-    # suffix = ''.join(suffixFile)
 
     return fullString
-    # return prefix + "\n" + str + "\n" + infix + "\n" + str2 + "\n" + suffix + "\n"
-
-def printSystem(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount):
-    print(systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount))
-
-
-
-def printInstantiation(hosts, userEquipments, executorCount):
-    print(generateInstantiation(hosts, userEquipments, executorCount))

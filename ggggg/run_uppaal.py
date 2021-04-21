@@ -2,10 +2,12 @@ import subprocess
 import re
 import os
 
+# Remove strange characters from output when parsing results
 def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
+# Runs verifyta on infile and queryfile, and parses result to figure out the answers
 def runUPPAAL(verifytaLocation, infile, queryfile, outputfile, verbose=False):
     cmd = "\"" + verifytaLocation + "\" \"" + str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
     os.system(cmd)
