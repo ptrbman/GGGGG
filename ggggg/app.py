@@ -129,30 +129,29 @@ main_layout = [
 
     ## VERIFY MODEL ##
     [sg.Text('Verify UPPAAL model', key='labelVerify', text_color='gray', font=header_font)],
-    [sg.Button('Preview', disabled=True, font=font)],
-    [sg.Input('', key='txtUPPAALFile', font=font, disabled=True)],
-    [sg.Button('Check Deadlines Met', key='btnDeadlines', disabled=True),
-     sg.Text("Not checked", key='labelDeadlines', text_color='gray', font=font),
+    [sg.Input('', key='txtUPPAALFile', font=font, disabled=True),sg.Button('Preview', disabled=True, font=font)],
+    [sg.Button('Check Deadlines Met', key='btnDeadlines', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelDeadlines', text_color='gray', size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtDeadlinesQuery", visible=False)],
 
-    [sg.Button('Check Message Queues Not Full', key='btnQueues', disabled=True),
-     sg.Text("Not checked", key='labelQueues', text_color='gray', font=font),
+    [sg.Button('Check Message Queues Not Full', key='btnQueues', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelQueues', text_color='gray', size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtQueuesQuery", visible=False)],
 
-    [sg.Button('Check No Deadlock', key='btnDeadlock', disabled=True),
-     sg.Text("Not checked", key='labelDeadlock', text_color='gray', font=font),
+    [sg.Button('Check No Deadlock', key='btnDeadlock', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelDeadlock', text_color='gray', size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtDeadlockQuery", visible=False)],
 
-    [sg.Button('Check No Free Executor', key='btnExecutor', disabled=True),
-     sg.Text("Not checked", key='labelExecutor', text_color='gray', font=font),
+    [sg.Button('Check No Free Executor', key='btnExecutor', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelExecutor', text_color='gray', size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtExecutorQuery", visible=False)],
 
-    [sg.Button('Check No Free Monitor', key='btnMonitor', disabled=True),
-     sg.Text("Not checked", key='labelMonitor', text_color='gray', font=font),
+    [sg.Button('Check No Free Monitor', key='btnMonitor', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelMonitor', text_color='gray', size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtMonitorQuery", visible=False)],
 
-    [sg.Button('Check No Need Rerouting', key='btnRerouting', disabled=True),
-     sg.Text("Not checked", key='labelRerouting', text_color='gray', font=font),
+    [sg.Button('Check No Need Rerouting', key='btnRerouting', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelRerouting', text_color='gray', size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtReroutingQuery", visible=False)]
 ]
 
