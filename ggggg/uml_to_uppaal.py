@@ -87,12 +87,12 @@ def LoadSystem(infile, verbose=False):
             names.append(sliceName)
             slices.append(Slice(id(sliceName), len(slices)))
             assignments[id(sliceName)] = {}
-        elif "!create Link" in l:
-            m = re.search('!create (.*): pLink between \\((.*), (.*)\\)', l)
-            linkName = m.group(1)
-            names.appe
-            links.append(Link(id(linkName), len(links), id(m.group(2)), id(m.group(3))))
-            assignments[id(linkName)] = {}
+        # elif "!create Link" in l:
+        #     m = re.search('!create (.*): pLink between \\((.*), (.*)\\)', l)
+        #     linkName = m.group(1)
+        #     names.appe
+        #     links.append(Link(id(linkName), len(links), id(m.group(2)), id(m.group(3))))
+        #     assignments[id(linkName)] = {}
         elif re.search("!create (.*) vLink between (.*)", l): # vLink = Route
             m = re.search("!create (.*) : vLink between ((.*), (.*))", l)
             vLinkName = m.group(1)
@@ -152,8 +152,28 @@ def LoadSystem(infile, verbose=False):
     alloc = Allocation(allocation)
 
 
+    def checkDestroyed(el, l):
+        for thing in l:
+            if thing.i == el:
+                l.remove(thing)
+                return thing
+        return None
+
+    def checkLists(el, lists):
+        for l in lists:
+            r = checkDestroyed(el, l)
+            if (r):
+                return r
+        return None
+
     if (destroyed):
-        raise Exception("Destroyed objects in input-file")
+        for d in destroyed:
+            r = checkLists(d, [hosts, vnfs, slices, userEquipments, links, routes])
+            if not r:
+                msg = "Did not find destroyed object: " + names[d]
+                raise(Exception(msg))
+            else:
+                print("Destroyed object: " + names[d])
 
 
     # Attribute assignments are parsed in a general way and here assigned to correct member
@@ -174,6 +194,7 @@ def LoadSystem(infile, verbose=False):
 
     # Routing requires a bit of translation
     for r in routes:
+        print(names[r.i])
         routeString = assignments[r.i]['Links']
         m = re.search("Sequence {(.*)}", routeString).group(1).split(',')
         if m == ['']:

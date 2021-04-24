@@ -19,7 +19,10 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
         for l in links:
             if (l.begin == hId):
                 steps.append(l.end)
-        return steps
+            if (l.end == hId):
+                steps.append(l.begin)
+        # Remove duplicates
+        return list(dict.fromkeys(steps))
 
 
     # All paths from host1 to host 2
@@ -28,7 +31,7 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
         # If locations are the same, there is only one (the empty) possibility.
         # In contrast to the list of possibilities being empty.
         if (host1 == host2):
-            return [[]]
+            return [[-1]]
 
         todo = []
         for s in allSteps(host1):
@@ -55,20 +58,43 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
     for h1 in hosts:
         for h2 in hosts:
             allpaths[(h1.i, h2.i)] = allPaths(h1.i, h2.i)
+            allpaths[(h2.i, h1.i)] = allPaths(h2.i, h1.i)
 
     # routingOptions[i][j] contains all possible routes for slice i on step j
     routingOptions = []
 
+    print("ALLOCATION")
+    for i in range(0, 10):
+        print(str(i) + "-> " + str(alloc.alloc[i]))
+
+    def getOpts(h1, h2):
+        # ret = allpaths[(alloc.alloc[h1], alloc.alloc[h2])]
+        ret = allpaths[(h1, h2)]
+        if not ret:
+            print("No path from " + str(h1) + " to " + str(h2))
+        return ret
+
     # optPerSlice[i][j] contains all the number of possible routes for slice i on step j
     optPerSlice = []
     for (s,c) in zip(slices, chains):
+        print(">>>>>>")
+        print("\t", s.i)
+        print("\t", c.t(3))
         optionSteps = []
         optCount = []
+        print("Host: ", str(c.chain[0].uid))
         for i in range(0, len(c.chain)-1):
-            optionSteps.append(allpaths[(alloc.alloc[c.chain[i].uid], alloc.alloc[c.chain[i+1].uid])])
-            optCount.append(len(allpaths[(alloc.alloc[c.chain[i].uid], alloc.alloc[c.chain[i+1].uid])]))
+            host1 = alloc.alloc[c.chain[i].uid]
+            host2 = alloc.alloc[c.chain[i+1].uid]
+            print("Host" + str(host1) + " ---> Host" + str(host2))
+            opts = getOpts(host1, host2)
+            print("\t" + str(opts))
+            optionSteps.append(opts)
+            optCount.append(len(opts))
         routingOptions.append(optionSteps)
         optPerSlice.append(optCount)
+
+    print(optPerSlice)
 
     # Compute total number of routing options and create index
     totalOptions = 1
@@ -111,6 +137,9 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
         for l in links:
             if l.begin == h1 and l.end == h2:
                 return l
+            if l.end == h1 and l.begin == h2:
+                return l
+
 
     # Transform a path to a list of links
     def listToLinks(l):
@@ -122,7 +151,11 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
     # List of all resulting systems
     systems = []
 
+    print("ROUTING OPTIONS")
+    print(routingOptions)
+
     for opt in allOptions:
+        print(opt)
         rts = []
 
         # Translate for each slice to a routingtable
@@ -130,6 +163,7 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
             curRouting = []
             for j in range(0, slices[i].chainLength-1):
                 route = Route(-1, listToLinks(routingOptions[i][j][opt[i][j]]))
+                print("---->" + str(listToLinks(routingOptions[i][j][opt[i][j]])))
                 curRouting.append(route)
             rts.append(RoutingTable(curRouting))
 
