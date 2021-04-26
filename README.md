@@ -18,7 +18,7 @@ Afterwards, it is recommended to create a virtual environment. Change directory 
 
 ```console
 python -m venv pyenv
-source pyenb/bin/activate
+source pyenv/bin/activate
 ```
 
 Now install the required packages using pip:
