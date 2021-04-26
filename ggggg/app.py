@@ -138,6 +138,7 @@ verification_layout = [
     [sg.Button(QUERIES[3][0], key='btnExecutor', size=(30,1), disabled=True),
      sg.Text("Not checked", key='labelExecutor',  size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtExecutorQuery", visible=False)]
+    ]
 
 settings_layout = [
     [sg.Text("Settings", font=header_font)],
@@ -150,8 +151,7 @@ settings_layout = [
     [sg.Text("Executors/Monitors: ", key="labelExecutorMonitor", font=font),
      sg.Input('2', key='txtExecutors', font=font, size=(4,1)),
      sg.Text("Message Queue Length: ", key="labelQueue", font=font),
-     sg.Input('3', key='txtQueue', font=font, size=(4,1))],
-
+     sg.Input('3', key='txtQueue', font=font, size=(4,1))]
 ]
 
 details_layout = [
@@ -266,7 +266,7 @@ def find_allocation(sysdict, executors, queue):
 
     # TODO: What if nothing found?
     (a, r) = Verify(sysdict, verifytaLocation)
-    window['txtFindAllocation'].update(currentAllocation)
+    window['txtFindAllocation'].update(a)
     return (a, r)
 
 while True:
