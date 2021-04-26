@@ -53,7 +53,19 @@ In the verification tab it is possible to generate a UPPAAL model and check cert
 ## Settings Tab
 Here it is possible to set the location of the UPPAAL binaries as well as the parameters `Executors` and `Message Queue Length`.
 
+# Further Reading
+The UML framework used is described in [3] and [4].
+
 # References
 [1] https://uppaal.org/
 
 [2] https://sourceforge.net/projects/useocl/
+
+[3] UML-based Modeling and Analysis of 5G Service Orchestration (Nov 2020)
+Ashalatha Kunnappilly, Peter Backeman, Cristina Seceleanu
+THE 27TH ASIA-PACIFIC SOFTWARE ENGINEERING CONFERENCE (APSEC 2020)
+
+[4] From UML Modeling to UPPAAL Model checking of 5G Dynamic Service Orchestration (May 2021)
+Ashalatha Kunnappilly, Peter Backeman, Cristina Seceleanu
+7th international Conference on the Engineering of Computer Based Systems (ECBS 2021)
+
