@@ -1,25 +1,109 @@
-import re
-import copy
+## This module provides methods for finding configurations which fulfills
+## deadline constraints for fiveg systems.
+
+from ggggg.uml_to_uppaal import ToUPPAAL
+from ggggg.run_uppaal import runUPPAAL
 from ggggg.fiveg import *
 
-# Generate one model for each possible routing
-def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
+import copy
+
+# Returns True if sysdict with allocation and routing meets all deadlines
+# PRE: sysdict should contain Executors and QueueLength
+def verify(sysdict, allocation, routing, verifytaLocation):
+    ## Generate UPPAAL model
+
+    sysdict['Allocation'] = allocation
+    sysdict['Routing'] = routing
+
+    EXECUTORS = int(sysdict['Executors'])
+    QUEUE = int(sysdict['QueueLength'])
+    modelFileName = "tmp/verify.xml"
+    ToUPPAAL(sysdict, modelFileName, EXECUTORS, QUEUE)
+
+    ## Create query file
+    queryFileName = "tmp/verify.q"
+    f = open(queryFileName, "w")
+    f.write("A[] not M0.MissedDeadline")
+    f.close()
+
+    ## Run UPPAAL
+    outputFileName = "tmp/verify.out"
+    answers = runUPPAAL(verifytaLocation, modelFileName, queryFileName, outputFileName)
+
+    ret = answers[0][1]
+    if (ret == "sat"):
+        return True
+    elif (ret == "unsat"):
+        return False
+
+    msg = "Unknown answer: " + ret
+    raise Exception(msg)
+
+
+# Generate all allocations possible for system in sysdict
+def generate_allocations(sysdict):
+    vnfs = sysdict['VNFs']
+    hosts = sysdict['Hosts']
+
+    options = []
+    for vnf in vnfs:
+        thisOptions = []
+        for host in hosts:
+            if (vnf.Type in host.capabilities):
+                thisOptions.append(host)
+        options.append(thisOptions)
+
+    optCount = list(map(len, options))
+    idx = [0]*len(vnfs)
+
+    allAllocations = []
+    totalOptions = 1
+    for o in optCount:
+        totalOptions *= o
+
+    for _ in range(1, totalOptions):
+        ii = copy.deepcopy(idx)
+        allAllocations.append(ii)
+
+        # Increase index
+        increased = False
+        i = 0
+        while not increased:
+            idx[i] += 1
+            if (idx[i] == optCount[i]):
+                idx[i] = 0
+            else:
+                increased = True
+            i += 1
+    allAllocations.append(idx)
+
+    allocations = []
+    for alloc in allAllocations:
+        nextAlloc = {}
+        for i in range(0, len(vnfs)):
+            nextAlloc[vnfs[i]] = options[i][alloc[i]]
+        allocations.append(Allocation(nextAlloc))
+
+    return allocations
+
+
+# Generate all possible routings given systme sysdict and allocation alloc
+def generate_routings(sysdict, alloc):
     links = sysdict['Links']
     hosts = sysdict['Hosts']
     routing = sysdict['Routing']
-    alloc = sysdict['Allocation']
     slices = sysdict['Slices']
     chains = sysdict['Chains']
     vnfs = sysdict['VNFs']
     userEquipments = sysdict['UserEquipments']
 
     # All "next steps" from host hId
-    def allSteps(hId):
+    def allSteps(h):
         steps = []
         for l in links:
-            if (l.begin == hId):
+            if (l.begin == h):
                 steps.append(l.end)
-            if (l.end == hId):
+            if (l.end == h):
                 steps.append(l.begin)
         # Remove duplicates
         return list(dict.fromkeys(steps))
@@ -51,24 +135,18 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
                         todo.append(newTodo)
         return paths
 
-
-
     # We create a dictionary containing all the paths
     allpaths = {}
     for h1 in hosts:
         for h2 in hosts:
-            allpaths[(h1.i, h2.i)] = allPaths(h1.i, h2.i)
-            allpaths[(h2.i, h1.i)] = allPaths(h2.i, h1.i)
+            allpaths[(h1, h2)] = allPaths(h1, h2)
+            allpaths[(h2, h1)] = allPaths(h2, h1)
+
 
     # routingOptions[i][j] contains all possible routes for slice i on step j
     routingOptions = []
 
-    print("ALLOCATION")
-    for i in range(0, 10):
-        print(str(i) + "-> " + str(alloc.alloc[i]))
-
     def getOpts(h1, h2):
-        # ret = allpaths[(alloc.alloc[h1], alloc.alloc[h2])]
         ret = allpaths[(h1, h2)]
         if not ret:
             print("No path from " + str(h1) + " to " + str(h2))
@@ -77,24 +155,17 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
     # optPerSlice[i][j] contains all the number of possible routes for slice i on step j
     optPerSlice = []
     for (s,c) in zip(slices, chains):
-        print(">>>>>>")
-        print("\t", s.i)
-        print("\t", c.t(3))
         optionSteps = []
         optCount = []
-        print("Host: ", str(c.chain[0].uid))
         for i in range(0, len(c.chain)-1):
-            host1 = alloc.alloc[c.chain[i].uid]
-            host2 = alloc.alloc[c.chain[i+1].uid]
-            print("Host" + str(host1) + " ---> Host" + str(host2))
+            host1 = alloc.alloc[c.chain[i]]
+            host2 = alloc.alloc[c.chain[i+1]]
             opts = getOpts(host1, host2)
-            print("\t" + str(opts))
             optionSteps.append(opts)
             optCount.append(len(opts))
         routingOptions.append(optionSteps)
         optPerSlice.append(optCount)
 
-    print(optPerSlice)
 
     # Compute total number of routing options and create index
     totalOptions = 1
@@ -149,13 +220,9 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
         return ret
 
     # List of all resulting systems
-    systems = []
-
-    print("ROUTING OPTIONS")
-    print(routingOptions)
+    routings = []
 
     for opt in allOptions:
-        print(opt)
         rts = []
 
         # Translate for each slice to a routingtable
@@ -163,18 +230,31 @@ def AllRoutings(sysdict, executorCount, queueLength, verbose=False):
             curRouting = []
             for j in range(0, slices[i].chainLength-1):
                 route = Route(-1, listToLinks(routingOptions[i][j][opt[i][j]]))
-                print("---->" + str(listToLinks(routingOptions[i][j][opt[i][j]])))
                 curRouting.append(route)
             rts.append(RoutingTable(curRouting))
+        routings.append(rts)
 
-        # Simple error checking, we probably need to handle this more gracefully
-        error = checkSystem(hosts, vnfs, links, slices, chains, alloc, rts, queueLength, executorCount)
+    return routings
 
-        if not (error == ""):
-            print("ERRORS")
-            return (error, None)
-        else:
-            outstring = generateSystem(hosts, vnfs, links, slices, chains, alloc, rts, userEquipments, queueLength, executorCount)
-            systems.append(outstring)
 
-    return systems
+# API for verifying allocation
+def VerifyAllocation(sysdict, allocation, verifytaLocation):
+    routings = generate_routings(sysdict, allocation)
+    for routing in routings:
+        answer = verify(sysdict, allocation, routing, verifytaLocation)
+        if (answer):
+            return routing
+    return None
+
+# API For verifying system
+def Verify(sysdict, verifytaLocation):
+    allocations = generate_allocations(sysdict)
+    i = 0
+    for alloc in allocations:
+        i += 1
+        print(str(i) + "/" + str(len(allocations)))
+        r = VerifyAllocation(sysdict, alloc, verifytaLocation)
+        if r:
+            return (alloc, r)
+    return None
+

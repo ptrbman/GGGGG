@@ -1,4 +1,3 @@
-#
 #  We want to input a UML-file (in the USE-tools .soil notation) and generate the corresponding
 #  UPPAAL model.
 #
@@ -6,6 +5,8 @@
 import re
 from ggggg.fiveg import *
 
+### uid = uppaal_id and has to be from 0 to |hosts|-1, etc.
+### should be updated before model is generated
 
 # Loads instance in infile and create sysdict
 def LoadSystem(infile, verbose=False):
@@ -20,13 +21,16 @@ def LoadSystem(infile, verbose=False):
     hosts = []
     vnfs = []
     links = []
-    names = []
     routes = []
     slices = []
     routingTables = []
     chains = []
     userEquipments = []
     allocation = {}
+
+    # Storing id and reference for all objects for access
+    names = []
+    objects = []
 
     # Contains all assignments gathered from the soil-script
     assignments = {}
@@ -39,7 +43,7 @@ def LoadSystem(infile, verbose=False):
 
 
     # Gets the "python"-id of object [name]
-    def id(name):
+    def myid(name):
         return names.index(name)
 
     # Ensure we only use soil-script files
@@ -51,7 +55,7 @@ def LoadSystem(infile, verbose=False):
             return assignments[i][attr]
         else:
             errors.append("Object " + names[i] + " has undefined attribute " + attr)
-            return "undef"
+            return None
 
     # We have to do some nasty things due to how USE creates soil-scripts
     curpLink = 0
@@ -67,80 +71,86 @@ def LoadSystem(infile, verbose=False):
             m = re.search('!new Host\(\'(.*)\'\)', l)
             hostName = m.group(1)
             names.append(hostName)
-            hosts.append(Host(id(hostName), len(hosts)))
-            assignments[id(hostName)] = {}
+            newHost = Host(myid(hostName), hostName, len(hosts))
+            hosts.append(newHost)
+            objects.append(newHost)
+            assignments[myid(hostName)] = {}
         elif "!new VNF" in l:
             m = re.search('!new VNF\(\'(.*)\'\)', l)
             vnfName = m.group(1)
             names.append(vnfName)
-            vnfs.append(VNF(id(vnfName), len(vnfs)))
-            assignments[id(vnfName)] = {}
+            newVNF = VNF(myid(vnfName), vnfName, len(vnfs))
+            vnfs.append(newVNF)
+            objects.append(newVNF)
+            assignments[myid(vnfName)] = {}
         elif "!new UserEquipment" in l:
             m = re.search('!new UserEquipment\(\'(.*)\'\)', l)
             ueName = m.group(1)
             names.append(ueName)
-            userEquipments.append(UserEquipment(id(ueName), len(userEquipments)))
-            assignments[id(ueName)] = {}
+            newUE = UserEquipment(myid(ueName), len(userEquipments))
+            userEquipments.append(newUE)
+            objects.append(newUE)
+            assignments[myid(ueName)] = {}
         elif "!new Slice" in l:
             m = re.search('!new Slice\(\'(.*)\'\)', l)
             sliceName = m.group(1)
             names.append(sliceName)
-            slices.append(Slice(id(sliceName), len(slices)))
-            assignments[id(sliceName)] = {}
-        # elif "!create Link" in l:
-        #     m = re.search('!create (.*): pLink between \\((.*), (.*)\\)', l)
-        #     linkName = m.group(1)
-        #     names.appe
-        #     links.append(Link(id(linkName), len(links), id(m.group(2)), id(m.group(3))))
-        #     assignments[id(linkName)] = {}
+            newSlice = Slice(myid(sliceName), len(slices))
+            slices.append(newSlice)
+            objects.append(newSlice)
+            assignments[myid(sliceName)] = {}
         elif re.search("!create (.*) vLink between (.*)", l): # vLink = Route
             m = re.search("!create (.*) : vLink between ((.*), (.*))", l)
             vLinkName = m.group(1)
             names.append(vLinkName)
-            route = Route(id(vLinkName))
+            route = Route(myid(vLinkName))
             routes.append(route)
+            objects.append(route)
             dprint("Ignoring vLink beginning and end: " + m.group(2) + m.group(3))
-            assignments[id(vLinkName)] = {}
+            assignments[myid(vLinkName)] = {}
         elif "!insert" in l and "into Allocation" in l:
             m = re.search("!insert \\((.*),(.*)\\) into Allocation", l)
             vnfName = m.group(1)
             hostName = m.group(2)
-            vnf = next(v for v in vnfs if v.i == id(vnfName))
-            host = next(h for h in hosts if h.i == id(hostName))
-            allocation[vnf.uid] = host.uid
+            vnf = next(v for v in vnfs if v.i == myid(vnfName))
+            host = next(h for h in hosts if h.i == myid(hostName))
+            allocation[vnf] = host
         elif "!insert" in l and "into Subscription" in l:
             m = re.search("!insert \\((.*),(.*)\\) into Subscription", l)
             # Find UPPAAL id of subscribed slice
-            sslice = next(s for s in slices if s.i == id(m.group(2)))
+            sslice = next(s for s in slices if s.i == myid(m.group(2)))
             uppaalid = sslice.uid
-            assignments[id(m.group(1))]['subscribedSlice'] = uppaalid
+            assignments[myid(m.group(1))]['subscribedSlice'] = uppaalid
         elif "!insert" in l and "into pLink" in l:
             curpLink += 1
             m = re.search("!insert \\((.*),(.*)\\) into pLink", l)
             linkName = "pLink" + str(curpLink)
             names.append(linkName)
-            links.append(Link(id(linkName), len(links), id(m.group(1)), id(m.group(2))))
-            assignments[id(linkName)] = {}
+            newLink = Link(myid(linkName), len(links), objects[myid(m.group(1))], objects[myid(m.group(2))])
+            links.append(newLink)
+            objects.append(newLink)
+            assignments[myid(linkName)] = {}
         elif "!insert" in l and "into vLink" in l:
             curvLink += 1
             m = re.search("!insert \\((.*),(.*)\\) into vLink", l)
             vLinkName = "vLink" + str(curvLink)
             names.append(vLinkName)
-            route = Route(id(vLinkName))
+            route = Route(myid(vLinkName))
             routes.append(route)
+            objects.append(route)
             dprint("Ignoring vLink beginning and end: " + m.group(1) + m.group(2))
-            assignments[id(vLinkName)] = {}
+            assignments[myid(vLinkName)] = {}
         elif " := " in l:
             m = re.search('!(.*)\\.(.*) := (.*)', l)
             name = m.group(1)
             attribute = m.group(2)
             value = m.group(3)
-            assignments[id(name)][attribute] = value
+            assignments[myid(name)][attribute] = value
         elif re.search("--(.*)", l):
             dprint("Ignoring comment: " + l)
         elif "destroy" in l:
             m = re.search("!destroy (.*)", l)
-            did = id(m.group(1))
+            did = myid(m.group(1))
             destroyed.append(did)
         else:
             print(">>", l)
@@ -150,7 +160,6 @@ def LoadSystem(infile, verbose=False):
 
     routing = routingTables
     alloc = Allocation(allocation)
-
 
     def checkDestroyed(el, l):
         for thing in l:
@@ -180,13 +189,20 @@ def LoadSystem(infile, verbose=False):
     for h in hosts:
         h.cpu = attr(h.i, 'CPUResources')
         h.stor = attr(h.i, 'StorageResources')
-        mecstr = attr(h.i, 'MECHost')
         h.mec = attr(h.i, 'MECHost')
+        capString = attr(h.i, 'Capabilities')
+        m = re.search("Set {(.*)}", capString).group(1).split(',')
+        tmp = []
+        if not m == ['']:
+            for vnfType in m:
+                tmp.append(vnfType.strip())
+        h.capabilities = tmp
 
     for v in vnfs:
         v.BCET = attr(v.i, 'BCET')
         v.WCET = attr(v.i, 'WCET')
         v.Prio = attr(v.i, 'Priority')
+        v.Type = attr(v.i, 'Type')
 
     for l in links:
         l.bw = assignments[l.i]['Bandwidth']
@@ -194,7 +210,6 @@ def LoadSystem(infile, verbose=False):
 
     # Routing requires a bit of translation
     for r in routes:
-        print(names[r.i])
         routeString = assignments[r.i]['Links']
         m = re.search("Sequence {(.*)}", routeString).group(1).split(',')
         if m == ['']:
@@ -202,7 +217,7 @@ def LoadSystem(infile, verbose=False):
         else:
             route = []
             for link in m:
-                i = id(link.strip())
+                i = myid(link.strip())
                 l = next(l for l in links if l.i == i)
                 route.append(l)
             r.route = route
@@ -216,30 +231,43 @@ def LoadSystem(infile, verbose=False):
         m = re.search("Sequence {(.*)}", vnfsString).group(1).split(',')
         vnfSeq = []
         for vnf in m:
-            i = id(vnf.strip())
+            i = myid(vnf.strip())
             v = next(v for v in vnfs if v.i == i)
             vnfSeq.append(v)
         chains.append(SliceChain(vnfSeq)) # TODO :Rename this to chains ...
-
-        chainString = attr(s.i, 'Routing')
-        m = re.search("Sequence {(.*)}", chainString).group(1).split(',')
-        if m == ['']:
-            routingTables.append(RoutingTable([]))
-        else:
-            routingTable = []
-            for vlink in m:
-                i = id(vlink.strip())
-                route = next(r for r in routes if r.i == i)
-                routingTable.append(route)
-
-            routingTables.append(RoutingTable(routingTable))
         s.chainLength = len(vnfSeq)
+
+        ## Routing might not be described
+        chainString = attr(s.i, 'Routing')
+        if not not chainString:
+            m = re.search("Sequence {(.*)}", chainString).group(1).split(',')
+            if m == ['']:
+                routingTables.append(RoutingTable([]))
+            else:
+                routingTable = []
+                for vlink in m:
+                    i = myid(vlink.strip())
+                    route = next(r for r in routes if r.i == i)
+                    routingTable.append(route)
+
+                routingTables.append(RoutingTable(routingTable))
 
     for ue in userEquipments:
         ue.subscribedSlice = assignments[ue.i]['subscribedSlice']
         ue.maxInst = assignments[ue.i]['MaxInstantiation']
         ue.actTime = assignments[ue.i]['ActivationTime']
 
+    if (errors):
+        for e in errors:
+            print(e)
+
+    def updateUID(ls):
+        for i, e in enumerate(ls):
+            e.uid = i
+
+    ### UPDATE uis
+    for ll in [hosts, vnfs, links, slices]:
+        updateUID(ll)
 
     # Put all python classes into a sysdict
     sysdict = {}
@@ -293,3 +321,4 @@ def ToUPPAAL(sysdict, outfile, executorCount, queueLength, verbose=False):
         f.write(outstring)
 
         return (error, sysdict)
+

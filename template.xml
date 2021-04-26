@@ -50,8 +50,10 @@ typedef struct {
 
 urgent chan execute; // Generator generating the exceute signal and synchronises with the host, such that the host dont stay in idle location forever
 chan done[ExecutorCount];
-chan request, reqExe;
+chan request, reqExe, finExe;
 int lastRequestSliceId;
+int lastRequestMonitorId;
+int lastFinishedMonitorId;
 int MQ[HostCount][QueueLength][2]; // First element contains the id of the VNF, second element the id of the corresponding SliceExecutioner
 int [0, QueueLength] len[HostCount]; //Length of the message queues of the host 
 //
@@ -98,9 +100,18 @@ int sliceID;</declaration>
 		</location>
 		<init ref="id0"/>
 		<transition>
+			<source ref="id1"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-475" y="-199">lastFinishedMonitorId == MId</label>
+			<label kind="synchronisation" x="-475" y="-182">finExe?</label>
+			<nail x="-195" y="-170"/>
+			<nail x="-493" y="-161"/>
+		</transition>
+		<transition>
 			<source ref="id3"/>
 			<target ref="id1"/>
 			<label kind="synchronisation" x="-238" y="-76">reqExe!</label>
+			<label kind="assignment" x="-296" y="-51">lastRequestMonitorId = MId</label>
 			<nail x="-195" y="-51"/>
 		</transition>
 		<transition>
@@ -284,6 +295,8 @@ int sliceID;
 int sliceInst = 0; // current slice execution instance
 int vnfid = 0; //current vnf id
 
+int monitorId = -1; // ID of the monitor which requested this Executor
+
 bool rq = false; // to monitor UE request generation
 bool rqComplete=false; // to monitor UE request completion
 
@@ -441,6 +454,7 @@ void releaseBW() //release link bw
 			<target ref="id19"/>
 			<label kind="guard" x="-297" y="136">step == slices[sliceID].chainLength</label>
 			<label kind="synchronisation" x="-255" y="170">execute?</label>
+			<label kind="assignment" x="-322" y="161">lastFinishedMonitorId = monitorId</label>
 		</transition>
 		<transition>
 			<source ref="id18"/>
@@ -473,6 +487,7 @@ AvailableExecutors=AvailableExecutors+1</label>
 			<source ref="id19"/>
 			<target ref="id17"/>
 			<label kind="guard" x="-680" y="161">monitor&lt;=slices[sliceID].LatReq</label>
+			<label kind="synchronisation" x="-704" y="144">finExe!</label>
 			<label kind="assignment" x="-569" y="127">rqComplete = true</label>
 			<nail x="-348" y="161"/>
 			<nail x="-722" y="161"/>
@@ -487,12 +502,13 @@ queueVNFtoHost()</label>
 		<transition>
 			<source ref="id13"/>
 			<target ref="id14"/>
-			<label kind="synchronisation" x="-459" y="-85">reqExe?</label>
-			<label kind="assignment" x="-484" y="-68">rq = true, 
+			<label kind="synchronisation" x="-459" y="-102">reqExe?</label>
+			<label kind="assignment" x="-484" y="-85">rq = true, 
 monitor = 0, 
 sliceID = lastRequestSliceId,
 initialize(),
-AvailableExecutors=AvailableExecutors-1</label>
+AvailableExecutors=AvailableExecutors-1,
+monitorId = lastRequestMonitorId</label>
 		</transition>
 	</template>
 	<system>

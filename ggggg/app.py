@@ -3,12 +3,11 @@
 
 import PySimpleGUI as sg
 import os
-import random
 import string
 
 from ggggg.uml_to_uppaal import LoadSystem, ToUPPAAL
 from ggggg.run_uppaal import runUPPAAL
-from ggggg.generate_routings import AllRoutings
+from ggggg.solver import Verify
 
 #
 #  THEME
@@ -30,6 +29,11 @@ window = ""
 # These are used as standard values upon startup.
 deffolder = os.getcwd() + '/instances/'
 
+currentInfile = None
+currentSystem = None
+currentAllocation = None
+currentRouting = None
+
 #
 #  BINARY LOCATIONS
 #
@@ -37,7 +41,7 @@ deffolder = os.getcwd() + '/instances/'
 uppaalLocation = ''
 verifytaLocation = ''
 
-# Loqd "config.txt" and grab binary locations
+# Load "config.txt" and grab binary locations
 def loadConfig():
     global uppaalLocation
     global verifytaLocation
@@ -69,12 +73,6 @@ def QUERYQueueFull(sysdict):
 def QUERYNoFreeExecutor(sysdict):
     return "A[] not UE0.NoFreeExecutor"
 
-def QUERYNoFreeMonitor(sysdict):
-    return "A[] not UE0.NoFreeMonitor"
-
-def QUERYNeedRerouting(sysdict):
-    return "A[] not E0.NeedRerouting"
-
 def QUERYDeadlock(sysdict):
     conds = []
     i = 0
@@ -88,11 +86,9 @@ def QUERYDeadlock(sysdict):
 # List of all available queries
 QUERIES = [
     ("Deadlines met", "Deadlines", QUERYMissedDeadline),
-    ("Queues not full", "Queues", QUERYQueueFull),
+    ("Sufficient queue length", "Queues", QUERYQueueFull),
     ("No deadlock", "Deadlock", QUERYDeadlock),
-    ("No free executor", "Executor", QUERYNoFreeExecutor),
-    ("No free monitor", "Monitor", QUERYNoFreeMonitor),
-    ("Need Rerouting", "Rerouting", QUERYNeedRerouting),
+    ("Sufficient executors", "Executor", QUERYNoFreeExecutor),
 ]
 
 # Generates and saves a query to correct file
@@ -109,8 +105,7 @@ def genQueries(sysdict, modelName):
     fileNames = []
     for (fullName, shortName, queryString) in QUERIES:
         fileNames.append(saveQuery(sysdict, shortName, queryString, modelName))
-    return fileNames 
-
+    return fileNames
 
 #
 #   MAIN LAYOUT
@@ -120,40 +115,29 @@ def genQueries(sysdict, modelName):
 def sep(w):
     return sg.Text("_"*w, font=("Arial", 8))
 
-main_layout = [
+verification_layout = [
     ## GENERATE MODEL ##
-    [sg.Text('Generate UPPAAL model', key="labelGenerate", text_color='gray', font=header_font)],
-    [sg.Button('Create UPPAAL model', key='generateUPPAAL', disabled=True)],
-
-    [sep(100)],
+    [sg.Text('Verification', key="labelGenerate",  font=header_font)],
+    [sg.Button('Create UPPAAL model', key='generateUPPAAL', disabled=True), sg.Button('Preview', disabled=True, font=font)],
+    [sg.Input('', key='txtUPPAALFile', font=font, disabled=True)],
 
     ## VERIFY MODEL ##
-    [sg.Text('Verify UPPAAL model', key='labelVerify', text_color='gray', font=header_font)],
-    [sg.Input('', key='txtUPPAALFile', font=font, disabled=True),sg.Button('Preview', disabled=True, font=font)],
-    [sg.Button('Check Deadlines Met', key='btnDeadlines', size=(30,1), disabled=True),
-     sg.Text("Not checked", key='labelDeadlines', text_color='gray', size=(30,1), justification='right', font=font),
+    [sep(100)],
+    [sg.Button(QUERIES[0][0], key='btnDeadlines', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelDeadlines',  size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtDeadlinesQuery", visible=False)],
 
-    [sg.Button('Check Message Queues Not Full', key='btnQueues', size=(30,1), disabled=True),
-     sg.Text("Not checked", key='labelQueues', text_color='gray', size=(30,1), justification='right', font=font),
+    [sg.Button(QUERIES[1][0], key='btnQueues', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelQueues',  size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtQueuesQuery", visible=False)],
 
-    [sg.Button('Check No Deadlock', key='btnDeadlock', size=(30,1), disabled=True),
-     sg.Text("Not checked", key='labelDeadlock', text_color='gray', size=(30,1), justification='right', font=font),
+    [sg.Button(QUERIES[2][0], key='btnDeadlock', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelDeadlock',  size=(30,1), justification='right', font=font),
      sg.Input('hmm', key="txtDeadlockQuery", visible=False)],
 
-    [sg.Button('Check No Free Executor', key='btnExecutor', size=(30,1), disabled=True),
-     sg.Text("Not checked", key='labelExecutor', text_color='gray', size=(30,1), justification='right', font=font),
-     sg.Input('hmm', key="txtExecutorQuery", visible=False)],
-
-    [sg.Button('Check No Free Monitor', key='btnMonitor', size=(30,1), disabled=True),
-     sg.Text("Not checked", key='labelMonitor', text_color='gray', size=(30,1), justification='right', font=font),
-     sg.Input('hmm', key="txtMonitorQuery", visible=False)],
-
-    [sg.Button('Check No Need Rerouting', key='btnRerouting', size=(30,1), disabled=True),
-     sg.Text("Not checked", key='labelRerouting', text_color='gray', size=(30,1), justification='right', font=font),
-     sg.Input('hmm', key="txtReroutingQuery", visible=False)]
-]
+    [sg.Button(QUERIES[3][0], key='btnExecutor', size=(30,1), disabled=True),
+     sg.Text("Not checked", key='labelExecutor',  size=(30,1), justification='right', font=font),
+     sg.Input('hmm', key="txtExecutorQuery", visible=False)]
 
 settings_layout = [
     [sg.Text("Settings", font=header_font)],
@@ -162,16 +146,29 @@ settings_layout = [
      sg.FileBrowse(button_text="Browse", font=font, target='uppaalLocation', initial_folder=uppaalLocation)],
     [sg.Text("verifyta Location", font=font)],
      [sg.Input(verifytaLocation, key='verifytaLocation', font=font, enable_events=True),
-      sg.FileBrowse(button_text="Browse", font=font, target='verifytaLocation', initial_folder=verifytaLocation)]
+      sg.FileBrowse(button_text="Browse", font=font, target='verifytaLocation', initial_folder=verifytaLocation)],
+    [sg.Text("Executors/Monitors: ", key="labelExecutorMonitor", font=font),
+     sg.Input('2', key='txtExecutors', font=font, size=(4,1)),
+     sg.Text("Message Queue Length: ", key="labelQueue", font=font),
+     sg.Input('3', key='txtQueue', font=font, size=(4,1))],
+
 ]
 
-routings_layout = [
-    [sg.Text("Generate routings", font=header_font)],
-    [sg.Button('Generate all routings', key='btnGenerateRoutings', disabled=True)]
+details_layout = [
+    [sg.Text('Instance details:', key="labelInstance", font=header_font)],
+    [sg.Text("Hosts:",   key="labelHosts", font=font), sg.Text('--', key="txtHosts", font=font),
+     sg.Text("VNFs:",   key="labelVNFs", font=font), sg.Text('--', key="txtVNFs",  font=font),
+     sg.Text("Slices:",   key="labelSlices", font=font), sg.Text('--', key="txtSlices",  font=font),
+     sg.Text("User Equipment:",   key="labelUEs", font=font), sg.Text('--', key="txtUEs",  font=font),
+     sg.Text("Links:",   key="labelLinks", font=font), sg.Text('--', key="txtLinks",  font=font)],
+    [sg.Text("Allocation", font=header_font)],
+    [sg.Text("No allocation", key='txtFindAllocation', font=font, size=(30,20))],
+    [sg.Button('Find allocation', key='btnFindAllocation', size=(70,3), disabled=True)]
 ]
 
 layout = [
     [sg.Column([[sg.Image("ggggg/resources/logo.png")]], justification='center')],
+
     ## LOAD INSTANCE ##
     [sg.Text('Load Instance', font=header_font)],
     [sg.Input('', key='InstanceFile', enable_events=True, visible=False, font=font),
@@ -180,24 +177,12 @@ layout = [
 
     [sep(100)],
 
-    ## INSTANCE DETAILS ##
-    [sg.Text('Instance details:', key="labelInstance", text_color='gray', font=header_font)],
-    [sg.Text("Hosts:",  text_color='gray', key="labelHosts", font=font), sg.Text('--', key="txtHosts", text_color='gray',font=font),
-     sg.Text("VNFs:",  text_color='gray', key="labelVNFs", font=font), sg.Text('--', key="txtVNFs", text_color='gray', font=font),
-     sg.Text("Slices:",  text_color='gray', key="labelSlices", font=font), sg.Text('--', key="txtSlices", text_color='gray', font=font),
-     sg.Text("User Equipment:",  text_color='gray', key="labelUEs", font=font), sg.Text('--', key="txtUEs", text_color='gray', font=font),
-     sg.Text("Links:",  text_color='gray', key="labelLinks", font=font), sg.Text('--', key="txtLinks", text_color='gray', font=font)],
-
-    [sep(100)],
-
-    [sg.Text("Executors/Monitors: ", key="labelExecutorMonitor", text_color='gray', font=font),
-     sg.Input('2', key='txtExecutors', font=font, size=(4,1), disabled=True),
-     sg.Text("Message Queue Length: ", key="labelQueue", text_color='gray', font=font),
-     sg.Input('3', key='txtQueue', disabled=True, font=font, size=(4,1))],
-    [sg.TabGroup([[sg.Tab('Verification', main_layout),
-                   sg.Tab('Routings', routings_layout),
-                   sg.Tab('Settings', settings_layout)]],
-                       tab_background_color='white',
+    [sg.TabGroup([[sg.Tab('Details', details_layout),
+                   sg.Tab('Verification', verification_layout),
+                   # sg.Tab('Routings', routings_layout),
+                   sg.Tab('Settings', settings_layout)
+                   ]],
+                 tab_background_color='white',
                  background_color='white',
                  selected_background_color='blue')]]
 
@@ -206,89 +191,55 @@ window = sg.Window('GGGGG', layout)
 ## Enables widgets and changes text color depending on what stage in the process the user is
 def set_stage(stage):
     if stage == 1:
-        window['labelInstance'].update(text_color=textColor)
-        window['labelGenerate'].update(text_color=textColor)
-
-        window['labelHosts'].update(text_color=textColor)
-        window['labelVNFs'].update(text_color=textColor)
-        window['labelSlices'].update(text_color=textColor)
-        window['labelUEs'].update(text_color=textColor)
-        window['labelLinks'].update(text_color=textColor)
-
-        window['txtHosts'].update(text_color=textColor)
-        window['txtVNFs'].update(text_color=textColor)
-        window['txtSlices'].update(text_color=textColor)
-        window['txtUEs'].update(text_color=textColor)
-        window['txtLinks'].update(text_color=textColor)
-
-        window['labelExecutorMonitor'].update(text_color=textColor)
-        window['labelQueue'].update(text_color=textColor)
-
         window['txtExecutors'].update(disabled=False)
         window['txtQueue'].update(disabled=False)
         window['generateUPPAAL'].update(disabled=False)
-
-        window['btnGenerateRoutings'].update(disabled=False)
-
+        window['btnFindAllocation'].update(disabled=False)
 
         ## Disable stage 2 (in case previously enabled)
         window['Preview'].update(disabled=True)
-        window['labelVerify'].update(text_color='gray')
-        window['labelDeadlines'].update(text_color='gray')
-        window['labelDeadlock'].update(text_color='gray')
-        window['labelExecutor'].update(text_color='gray')
-        window['labelMonitor'].update(text_color='gray')
-        window['labelRerouting'].update(text_color='gray')
- 
-        window['labelQueues'].update(text_color='gray')
         window['btnDeadlines'].update(disabled=True)
         window['btnDeadlock'].update(disabled=True)
         window['btnExecutor'].update(disabled=True)
-        window['btnMonitor'].update(disabled=True)
-        window['btnRerouting'].update(disabled=True)
         window['btnQueues'].update(disabled=True)
 
     if stage == 2:
         window['Preview'].update(disabled=False)
-        window['labelVerify'].update(text_color=textColor)
-        window['labelDeadlines'].update(text_color=textColor, value="Not Checked")
-        window['labelQueues'].update(text_color=textColor, value="Not Checked")
-        window['labelDeadlock'].update(text_color=textColor, value="Not Checked")
-        window['labelExecutor'].update(text_color=textColor, value="Not Checked")
-        window['labelMonitor'].update(text_color=textColor, value="Not Checked")
-        window['labelRerouting'].update(text_color=textColor, value = "Not Checked")
+        window['labelDeadlines'].update(value="Not Checked")
+        window['labelQueues'].update(value="Not Checked")
+        window['labelDeadlock'].update(value="Not Checked")
+        window['labelExecutor'].update(value="Not Checked")
         window['btnDeadlines'].update(disabled=False)
         window['btnDeadlock'].update(disabled=False)
         window['btnQueues'].update(disabled=False)
         window['btnExecutor'].update(disabled=False)
-        window['btnMonitor'].update(disabled=False)
-        window['btnRerouting'].update(disabled=False)
 
 # Loads instance infile and updates info accordingly
 def load_instance(infile):
     instanceName = os.path.splitext(os.path.basename(infile))[0]
     window['labelInstanceName'].update(instanceName)
-    sysdict = LoadSystem(infile) 
+    sysdict = LoadSystem(infile)
     window['txtHosts'].update(str(len(sysdict['Hosts'])))
     window['txtVNFs'].update(str(len(sysdict['VNFs'])))
     window['txtSlices'].update(str(len(sysdict['Slices'])))
     window['txtUEs'].update(str(len(sysdict['UserEquipments'])))
     window['txtLinks'].update(str(len(sysdict['Links'])))
     set_stage(1)
+    return sysdict
 
 # Generate a UPPAAL model from instance in infile with executors and queueLength
-def generate_uppaal(infile, executors, queueLength):
+def generate_uppaal(infile, sysdict, executors, queueLength):
     modelName = os.path.splitext(os.path.basename(infile))[0]
     uppaalFile = os.getcwd() + '/models/' + modelName + '.xml'
-    sysdict = LoadSystem(infile)
+    sysdict['Allocation'] = currentAllocation
+    sysdict['Routing'] = currentRouting
     ToUPPAAL(sysdict, uppaalFile, executors, queueLength)
+
     queryFileNames = genQueries(sysdict, modelName)
     window['txtDeadlinesQuery'].update(value=queryFileNames[0])
     window['txtQueuesQuery'].update(value=queryFileNames[1])
     window['txtDeadlockQuery'].update(value=queryFileNames[2])
     window['txtExecutorQuery'].update(value=queryFileNames[3])
-    window['txtMonitorQuery'].update(value=queryFileNames[4])
-    window['txtReroutingQuery'].update(value=queryFileNames[5])
     window['txtUPPAALFile'].update(value=uppaalFile)
     set_stage(2)
 
@@ -302,7 +253,6 @@ def preview(uppaalLocation, modelFile):
     os.system(cmd)
     os.chdir(currentDir)
 
-
 # Run UPPAAL using query
 def verify(uppaalfile, query, queryfile):
     outputfile = os.getcwd() + '/tmp/' + 'tmp'
@@ -310,7 +260,14 @@ def verify(uppaalfile, query, queryfile):
     window['label' + query].update(answers[0][1])
     window['btn' + query].update(disabled=True)
 
+def find_allocation(sysdict, executors, queue):
+    sysdict['Executors'] = executors
+    sysdict['QueueLength'] = queue
 
+    # TODO: What if nothing found?
+    (a, r) = Verify(sysdict, verifytaLocation)
+    window['txtFindAllocation'].update(currentAllocation)
+    return (a, r)
 
 while True:
     event, values = window.read()
@@ -321,11 +278,17 @@ while True:
 
     ### LOAD INSTANCE ###
     elif event == 'InstanceFile':
-        load_instance(values['InstanceFile'])
+        currentInfile = values['InstanceFile']
+        currentSystem = load_instance(currentInfile)
+        (a, r) = (currentSystem['Allocation'], currentSystem['Routing'])
+        if a and r:
+            currentAllocation = a
+            currentRouting = rr
+            window['txtFindAllocation'].update(currentAllocation)
 
     ### GENERATE MODEL ###
     elif event == 'generateUPPAAL':
-        generate_uppaal(values['InstanceFile'], int(values['txtExecutors']), int(values['txtQueue']))
+        generate_uppaal(currentInfile, currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
 
     ### PREVIEW ###
     elif event == 'Preview':
@@ -355,43 +318,19 @@ while True:
         queryfile = values['txtExecutorQuery']
         verify(uppaalfile, "Executor", queryfile)
 
-    ### VERIFY MONITOR ###
-    elif event == 'btnMonitor':
-        uppaalfile = values['txtUPPAALFile']
-        queryfile = values['txtMonitorQuery']
-        verify(uppaalfile, "Monitor", queryfile)
+    ### FIND ALLOCATIONS ###
+    elif event == 'btnFindAllocation':
+        (a, r) = find_allocation(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
+        currentAllocation = a
+        currentRouting = r
 
-    ### VERIFY REROUTING ###
-    elif event == 'btnRerouting':
-        uppaalfile = values['txtUPPAALFile']
-        queryfile = values['txtReroutingQuery']
-        verify(uppaalfile, "Rerouting", queryfile)
-
-    ### GENERATE ROUTINGS ###
-    elif event == 'btnGenerateRoutings':
-        sysdict = LoadSystem(values['InstanceFile'])
-        systems = AllRoutings(sysdict, int(values['txtExecutors']), int(values['txtQueue']))
-
-        # Create directory in models/ to put results in if not exists
-        modelName = os.path.splitext(os.path.basename(values['InstanceFile']))[0]
-        if not os.path.exists('models/' + modelName):
-            os.makedirs('models/' + modelName)
-
-        prefix = "models/" + modelName + "/" + modelName
-        i = 0
-        for s in systems:
-            filename = prefix + "_" + str(i) + ".xml"
-            f = open(filename, "w")
-            f.write(s)
-            i = i + 1
-
-    ### CHANGE UPPAALLOCATION
+    ### CHANGE UPPAALLOCATION ###
     elif event == 'uppaalLocation':
         if (values['uppaalLocation'] != ''):
             uppaalLocation = values['uppaalLocation']
             saveConfig()
 
-    ### CHANGE VERIFYTALOCATION
+    ### CHANGE VERIFYTALOCATION ###
     elif event == 'verifytaLocation':
         if (values['verifytaLocation'] != ''):
             verifytaLocation = values['verifytaLocation']

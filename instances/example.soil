@@ -2,12 +2,12 @@
 !Host1.CPUResources := 10000
 !Host1.StorageResources := 1000
 !Host1.MECHost := false
-!Host1.Capabilities := Set{'VNF'}
+!Host1.Capabilities := Set {'VNF'}
 !new Host('Host2')
 !Host2.CPUResources := 10000
 !Host2.StorageResources := 1000
 !Host2.MECHost := false
-!Host2.Capabilities := Set{'VNF'}
+!Host2.Capabilities := Set {'VNF'}
 !new VNF('VNF1')
 !VNF1.Type := 'VNF'
 !VNF1.BCET := 2
