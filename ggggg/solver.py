@@ -51,7 +51,10 @@ def generate_allocations(sysdict):
         for host in hosts:
             if (vnf.Type in host.capabilities):
                 thisOptions.append(host)
+        if not thisOptions: # If any VNF has zero options, no allocations will work
+            return []
         options.append(thisOptions)
+
 
     optCount = list(map(len, options))
     idx = [0]*len(vnfs)
@@ -148,8 +151,7 @@ def generate_routings(sysdict, alloc):
 
     def getOpts(h1, h2):
         ret = allpaths[(h1, h2)]
-        if not ret:
-            print("No path from " + str(h1) + " to " + str(h2))
+        # print("No path from " + str(h1) + " to " + str(h2))
         return ret
 
     # optPerSlice[i][j] contains all the number of possible routes for slice i on step j
@@ -161,6 +163,9 @@ def generate_routings(sysdict, alloc):
             host1 = alloc.alloc[c.chain[i]]
             host2 = alloc.alloc[c.chain[i+1]]
             opts = getOpts(host1, host2)
+            # If there is no path from host1 to host2, there is no routing possible
+            if not opts:
+                return []
             optionSteps.append(opts)
             optCount.append(len(opts))
         routingOptions.append(optionSteps)
@@ -252,7 +257,7 @@ def Verify(sysdict, verifytaLocation):
     i = 0
     for alloc in allocations:
         i += 1
-        print(str(i) + "/" + str(len(allocations)))
+        print("Allocation " + str(i) + "/" + str(len(allocations)))
         r = VerifyAllocation(sysdict, alloc, verifytaLocation)
         if r:
             return (alloc, r)

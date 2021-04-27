@@ -4,10 +4,12 @@
 import PySimpleGUI as sg
 import os
 import string
+import copy
 
 from ggggg.uml_to_uppaal import LoadSystem, ToUPPAAL
 from ggggg.run_uppaal import runUPPAAL
 from ggggg.solver import Verify
+from ggggg.kfold import *
 
 #
 #  THEME
@@ -33,6 +35,9 @@ currentInfile = None
 currentSystem = None
 currentAllocation = None
 currentRouting = None
+
+# KFold
+kfoldresults = []
 
 #
 #  BINARY LOCATIONS
@@ -140,6 +145,24 @@ verification_layout = [
      sg.Input('hmm', key="txtExecutorQuery", visible=False)]
     ]
 
+data = [["-", "-"]]
+
+kfold_layout = [
+    [sg.Text('K-Fold verification', font=header_font)],
+    [sg.Text("Number of hosts to bring down: ", font=font), sg.Text('1', key="txtK", font=font),
+     sg.Button('Check', key='btnKFold', size=(25,1), disabled=True)],
+    [sg.Table(values=data,
+              headings=["Removed Host(s)", "Satisfiable"],
+              max_col_width=25,
+              justification='right',
+              alternating_row_color='lightblue',
+              num_rows=20,
+              enable_events=True,
+              key="kfoldtable"),
+    sg.Text("-", key='txtKFold', font=font, size=(30,15))],
+    [sg.Button('Study', key='btnKFoldStudy', size=(70,3), disabled=True)]
+]
+
 settings_layout = [
     [sg.Text("Settings", font=header_font)],
     [sg.Text("UPPAAL Location", font=font)],
@@ -162,7 +185,7 @@ details_layout = [
      sg.Text("User Equipment:",   key="labelUEs", font=font), sg.Text('--', key="txtUEs",  font=font),
      sg.Text("Links:",   key="labelLinks", font=font), sg.Text('--', key="txtLinks",  font=font)],
     [sg.Text("Allocation", font=header_font)],
-    [sg.Text("No allocation", key='txtFindAllocation', font=font, size=(30,20))],
+    [sg.Text("No allocation", key='txtFindAllocation', font=font, size=(30,15))],
     [sg.Button('Find allocation', key='btnFindAllocation', size=(70,3), disabled=True)]
 ]
 
@@ -179,7 +202,7 @@ layout = [
 
     [sg.TabGroup([[sg.Tab('Details', details_layout),
                    sg.Tab('Verification', verification_layout),
-                   # sg.Tab('Routings', routings_layout),
+                   sg.Tab('KFold', kfold_layout),
                    sg.Tab('Settings', settings_layout)
                    ]],
                  tab_background_color='white',
@@ -195,6 +218,7 @@ def set_stage(stage):
         window['txtQueue'].update(disabled=False)
         window['generateUPPAAL'].update(disabled=False)
         window['btnFindAllocation'].update(disabled=False)
+        window['btnKFold'].update(disabled=False)
 
         ## Disable stage 2 (in case previously enabled)
         window['Preview'].update(disabled=True)
@@ -269,6 +293,20 @@ def find_allocation(sysdict, executors, queue):
     window['txtFindAllocation'].update(a)
     return (a, r)
 
+def kfold(sysdict, executors, queue):
+    global kfoldresults
+    sysdict['Executors'] = executors
+    sysdict['QueueLength'] = queue
+    kfoldresults = kfoldhosts(1, sysdict, verifytaLocation)
+    tableData = []
+    for (h, r, s) in kfoldresults:
+        if r:
+            tableData.append([h.name, "SAT"])
+        else:
+            tableData.append([h.name, "UNSAT"])
+    window['kfoldtable'].update(tableData)
+    window['btnKFoldStudy'].update(disabled=True)
+
 while True:
     event, values = window.read()
 
@@ -324,6 +362,37 @@ while True:
         currentAllocation = a
         currentRouting = r
 
+    ### KFOLD ###
+    elif event == 'btnKFold':
+        kfold(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
+        window['btnKFold'].update(disabled=True)
+
+    elif event == 'kfoldtable':
+        if kfoldresults:
+        ## If multiple are selected, pick first one
+            selected = values['kfoldtable'][0]
+            (h, r, s) = kfoldresults[selected]
+            if r:
+                (a, r) = r
+                window['txtKFold'].update(a)
+            else:
+                window['txtKFold'].update("No allocation found")
+            window['btnKFoldStudy'].update(disabled=False)
+
+    elif event == 'btnKFoldStudy':
+        selected = values['kfoldtable'][0]
+        uppaalFile = os.getcwd() + '/tmp/kfoldstudy.xml'
+        (h, res, s) = kfoldresults[selected]
+        if res:
+            (a, r) = res
+            newDict = s
+            newDict['Allocation'] = a
+            newDict['Routing'] = r
+            ToUPPAAL(newDict, uppaalFile, int(values['txtExecutors']), int(values['txtQueue']))
+            preview(values['uppaalLocation'], uppaalFile)
+        else:
+            sg.Popup('Cannot study UNSAT cases.')
+
     ### CHANGE UPPAALLOCATION ###
     elif event == 'uppaalLocation':
         if (values['uppaalLocation'] != ''):
@@ -335,6 +404,7 @@ while True:
         if (values['verifytaLocation'] != ''):
             verifytaLocation = values['verifytaLocation']
             saveConfig()
+
 
     ### UNRECOGNIZED EVENT ###
     else:
