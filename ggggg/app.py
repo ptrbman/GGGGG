@@ -76,7 +76,12 @@ def QUERYQueueFull(sysdict):
     return "A[] not E0.ErrorQueueFull"
 
 def QUERYNoFreeExecutor(sysdict):
-    return "A[] not UE0.NoFreeExecutor"
+    conds = []
+    i = 0
+    for ue in sysdict['UserEquipments']:
+        conds.append("not UE" + str(i) + ".NoFreeExecutor")
+        i += 1
+    return "A[] (" + "&&".join(conds) + ")"
 
 def QUERYDeadlock(sysdict):
     conds = []
