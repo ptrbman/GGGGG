@@ -21,7 +21,7 @@ def LoadSystem(infile, verbose=False):
     hosts = []
     vnfs = []
     links = []
-    routes = []
+    paths = []
     slices = []
     routingTables = []
     chains = []
@@ -58,7 +58,7 @@ def LoadSystem(infile, verbose=False):
             return None
 
     # We have to do some nasty things due to how USE creates soil-scripts
-    curpLink = 0
+    curLink = 0
     curvLink = 0
 
     # Go line by line and update accordingly
@@ -95,19 +95,19 @@ def LoadSystem(infile, verbose=False):
             m = re.search('!new Slice\(\'(.*)\'\)', l)
             sliceName = m.group(1)
             names.append(sliceName)
-            newSlice = Slice(myid(sliceName), len(slices))
+            newSlice = Slice(myid(sliceName), sliceName, len(slices))
             slices.append(newSlice)
             objects.append(newSlice)
             assignments[myid(sliceName)] = {}
-        elif re.search("!create (.*) vLink between (.*)", l): # vLink = Route
-            m = re.search("!create (.*) : vLink between ((.*), (.*))", l)
-            vLinkName = m.group(1)
-            names.append(vLinkName)
-            route = Route(myid(vLinkName))
-            routes.append(route)
-            objects.append(route)
-            dprint("Ignoring vLink beginning and end: " + m.group(2) + m.group(3))
-            assignments[myid(vLinkName)] = {}
+        elif re.search("!create (.*) Path between (.*)", l): # vLink = Path
+            m = re.search("!create (.*) : Path between ((.*), (.*))", l)
+            PathName = m.group(1)
+            names.append(PathName)
+            path = Path(myid(PathName))
+            paths.append(path)
+            objects.append(path)
+            dprint("Ignoring Path beginning and end: " + m.group(2) + m.group(3))
+            assignments[myid(PathName)] = {}
         elif "!insert" in l and "into Allocation" in l:
             m = re.search("!insert \\((.*),(.*)\\) into Allocation", l)
             vnfName = m.group(1)
@@ -121,25 +121,25 @@ def LoadSystem(infile, verbose=False):
             sslice = next(s for s in slices if s.i == myid(m.group(2)))
             uppaalid = sslice.uid
             assignments[myid(m.group(1))]['subscribedSlice'] = uppaalid
-        elif "!insert" in l and "into pLink" in l:
-            curpLink += 1
-            m = re.search("!insert \\((.*),(.*)\\) into pLink", l)
-            linkName = "pLink" + str(curpLink)
+        elif "!insert" in l and "into Link" in l:
+            curLink += 1
+            m = re.search("!insert \\((.*),(.*)\\) into Link", l)
+            linkName = "Link" + str(curLink)
             names.append(linkName)
             newLink = Link(myid(linkName), len(links), objects[myid(m.group(1))], objects[myid(m.group(2))])
             links.append(newLink)
             objects.append(newLink)
             assignments[myid(linkName)] = {}
-        elif "!insert" in l and "into vLink" in l:
-            curvLink += 1
-            m = re.search("!insert \\((.*),(.*)\\) into vLink", l)
-            vLinkName = "vLink" + str(curvLink)
-            names.append(vLinkName)
-            route = Route(myid(vLinkName))
-            routes.append(route)
-            objects.append(route)
-            dprint("Ignoring vLink beginning and end: " + m.group(1) + m.group(2))
-            assignments[myid(vLinkName)] = {}
+        elif "!insert" in l and "into Path" in l:
+            curPath += 1
+            m = re.search("!insert \\((.*),(.*)\\) into Path", l)
+            PathName = "Path" + str(curPath)
+            names.append(PathName)
+            path = Path(myid(PathName))
+            paths.append(path)
+            objects.append(path)
+            dprint("Ignoring Path beginning and end: " + m.group(1) + m.group(2))
+            assignments[myid(PathName)] = {}
         elif " := " in l:
             m = re.search('!(.*)\\.(.*) := (.*)', l)
             name = m.group(1)
@@ -177,7 +177,7 @@ def LoadSystem(infile, verbose=False):
 
     if (destroyed):
         for d in destroyed:
-            r = checkLists(d, [hosts, vnfs, slices, userEquipments, links, routes])
+            r = checkLists(d, [hosts, vnfs, slices, userEquipments, links, paths])
             if not r:
                 msg = "Did not find destroyed object: " + names[d]
                 raise(Exception(msg))
@@ -209,18 +209,18 @@ def LoadSystem(infile, verbose=False):
         l.delay = assignments[l.i]['Delay']
 
     # Routing requires a bit of translation
-    for r in routes:
-        routeString = assignments[r.i]['Links']
-        m = re.search("Sequence {(.*)}", routeString).group(1).split(',')
+    for r in paths:
+        pathString = assignments[r.i]['Links']
+        m = re.search("Sequence {(.*)}", pathString).group(1).split(',')
         if m == ['']:
-            r.route = []
+            r.path = []
         else:
-            route = []
+            path = []
             for link in m:
                 i = myid(link.strip())
                 l = next(l for l in links if l.i == i)
-                route.append(l)
-            r.route = route
+                path.append(l)
+            r.path = path
 
     # Slices requires a bit more of translation
     for s in slices:
@@ -229,13 +229,11 @@ def LoadSystem(infile, verbose=False):
 
         vnfsString = attr(s.i, 'VNFs')
         m = re.search("Sequence {(.*)}", vnfsString).group(1).split(',')
-        vnfSeq = []
-        for vnf in m:
-            i = myid(vnf.strip())
-            v = next(v for v in vnfs if v.i == i)
-            vnfSeq.append(v)
-        chains.append(SliceChain(vnfSeq)) # TODO :Rename this to chains ...
-        s.chainLength = len(vnfSeq)
+        typeSeq = []
+        for t in m:
+            typeSeq.append(t.strip())
+        chains.append(Chain(typeSeq)) 
+        s.chainLength = len(typeSeq)
 
         ## Routing might not be described
         chainString = attr(s.i, 'Routing')
@@ -247,8 +245,8 @@ def LoadSystem(infile, verbose=False):
                 routingTable = []
                 for vlink in m:
                     i = myid(vlink.strip())
-                    route = next(r for r in routes if r.i == i)
-                    routingTable.append(route)
+                    path = next(r for r in paths if r.i == i)
+                    routingTable.append(path)
 
                 routingTables.append(RoutingTable(routingTable))
 
@@ -292,33 +290,14 @@ def LoadSystem(infile, verbose=False):
 # Takes a [sysdict] and outputs a UPPAAL model to [outfile]. [executorCount] and [queueLength] are used as additional parameters of the translation. If [verbose] lots of extra output is printed to stdout.
 
 def ToUPPAAL(sysdict, outfile, executorCount, queueLength, verbose=False):
+    sysdict['Executors'] = executorCount
+    sysdict['QueueLength'] = queueLength
 
-    # This is used for verbose mode
-    def dprint(str):
-        if (verbose):
-            print(str)
+    outstring = generateSystem(sysdict)
+    
+    assert ".xml" in outfile
+    f = open(outfile, "w")
+    f.write(outstring)
 
-    # Store all elements as (mostly) python classes
-    hosts = sysdict['Hosts']
-    vnfs = sysdict['VNFs']
-    links = sysdict['Links']
-    routing = sysdict['Routing']
-    alloc = sysdict['Allocation']
-    slices = sysdict['Slices']
-    chains = sysdict['Chains']
-    userEquipments = sysdict['UserEquipments']
-
-    error = checkSystem(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount)
-
-    if not (error == ""):
-        print("ERRORS")
-        return (error, None)
-    else:
-        outstring = generateSystem(hosts, vnfs, links, slices, chains, alloc, routing, userEquipments, queueLength, executorCount)
-
-        assert ".xml" in outfile
-        f = open(outfile, "w")
-        f.write(outstring)
-
-        return (error, sysdict)
+    return None
 

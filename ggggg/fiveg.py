@@ -82,8 +82,9 @@ class UserEquipment:
         self.subscribedSlice = subscribedSlice
 
 class Slice:
-    def __init__(self, i, uid, bw=-1, lat=-1, chainLength=-1):
+    def __init__(self, i, name, uid, bw=-1, lat=-1, chainLength=-1):
         self.i = i
+        self.name = name
         self.uid = uid
         self.bw = bw
         self.lat = lat
@@ -121,9 +122,28 @@ class RoutingTable:
         padded = unpadded + padding
         return "{" + ', '.join(padded) + "}"
 
-class SliceChain:
+
+class Mapping:
+    def __init__(self, mapping):
+        self.mapping = mapping
+
+    def len(self):
+        return len(self.mapping)
+
+    def __str__(self):
+        return "Mapping<" + str(list(map(lambda c : c.name, self.mapping))) + ">"
+
+    def t(self, maxChainLength, allocation):
+        ids = list(map(lambda c : str(allocation.host(c).uid), self.mapping))
+        padded = ids + (['-1']*(maxChainLength - len(ids)))
+        return "{" + ', '.join(padded) + "}"
+
+
+
+class Chain:
     def __init__(self, chain):
         self.chain = chain
+        self.types = chain
 
     def len(self):
         return len(self.chain)
@@ -146,6 +166,9 @@ class Allocation:
             l.append(self.alloc[v])
         return "{" + ', '.join(list(map(lambda c : str(c.uid), l))) + "}"
 
+    def host(self, vnf):
+        return self.alloc[vnf]
+
     def __str__(self):
         msg = []
         for vnf in self.alloc:
@@ -160,7 +183,18 @@ def checkSystem(hosts, vnfs, links, slices, chains, alloc, routing, queueLength,
         return ""
 
 # Gives the SYSTEM part to be inserted into template
-def systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount):
+def systemString(sysdict):
+    hosts = sysdict['Hosts']
+    vnfs = sysdict['VNFs']
+    links = sysdict['Links']
+    slices = sysdict['Slices']
+    chains = sysdict['Chains']
+    mappings = sysdict['Mappings']
+    alloc = sysdict['Allocation']
+    routing = sysdict['Routing']
+    queueLength = sysdict['QueueLength']
+    executorCount = sysdict['Executors']
+
     ### TODO: We have one extra element in chain!
     maxChainLength = max(map(lambda c : c.len(), chains))
     maxLinkStep = max(map(lambda r : r.maxLinkStep(), routing))
@@ -173,19 +207,21 @@ def systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength
     "const int ExecutorCount = " + str(executorCount) + ";\n"+\
     "const int MonitorCount = " + str(executorCount) + ";\n"+\
     "int AvailableExecutors = ExecutorCount;\n"+\
-    "int AvailableMonitors = MonitorCount;\n"+\
     "\n"+\
     "host hosts[" + str(len(hosts)) + "] = {" + ', '.join(list(map(lambda h : h.t(), hosts))) + "};\n"+\
     "vnf vnfs[" + str(len(vnfs)) + "] = {" + ', '.join(list(map(lambda v : v.t(), vnfs))) + "};\n"+\
     "link links[" + str(len(links)) + "] = {" + ', '.join(list(map(lambda l : l.t(), links)))+ "};\n"+\
     "slice slices[" + str(len(slices)) + "] = { " + ', '.join(list(map(lambda s : s.t(), slices))) + "};\n"+\
-    "int SliceChains[SliceCount][MaxChainLength] = {" + ', '.join(list(map(lambda c : c.t(maxChainLength), chains))) + "};\n"+\
+    "int SliceChains[SliceCount][MaxChainLength] = {" + ', '.join(list(map(lambda c : c.t(maxChainLength, alloc), mappings))) + "};\n"+\
     "int AllocV[VNFCount] = " + alloc.t(vnfs) + ";\n"+\
     "int RT[SliceCount][MaxChainLength][MaxLinkStep] = {" + ', '.join(list(map(lambda r : r.t(maxChainLength, maxLinkStep), routing))) + "};\n"
 
 
 # Gives the INSTANCE part to be inserted into template
-def instantiationString(hosts, userEquipments, executionCount):
+def instantiationString(sysdict):
+    hosts = sysdict['Hosts']
+    userEquipments = sysdict['UserEquipments']
+    executorCount = sysdict['Executors']
     allTAs = "system "
     hostsString = ""
 
@@ -204,12 +240,12 @@ def instantiationString(hosts, userEquipments, executionCount):
         i = i + 1
 
     executorString = ""
-    for i in range(0, executionCount):
+    for i in range(0, executorCount):
         executorString = executorString + "\n" + "E" + str(i) + " = Executor(" + str(i) + ");"
         allTAs = allTAs + "E" + str(i) + ", "
 
     monitorString = ""
-    for i in range(0, executionCount):
+    for i in range(0, executorCount):
         monitorString = monitorString + "\n" + "M" + str(i) + " = Monitor(" + str(i) + ");"
         allTAs = allTAs + "M" + str(i) + ", "
 
@@ -220,9 +256,9 @@ def instantiationString(hosts, userEquipments, executionCount):
 
 
 # Gives a complete string for a UPPAAL model consisting of all the parameters
-def generateSystem(hosts, vnfs, links, slices, chains, alloc, routing, userEquipments, queueLength, executorCount):
-    sysStr = systemString(hosts, vnfs, links, slices, chains, alloc, routing, queueLength, executorCount)
-    instStr = instantiationString(hosts, userEquipments, executorCount)
+def generateSystem(sysdict):
+    sysStr = systemString(sysdict)
+    instStr = instantiationString(sysdict)
 
     template = open("template.xml", "r")
     fullString = ''.join(template)

@@ -5,10 +5,15 @@ from ggggg.solver import *
 import copy
 
 def removeHost(name, sysdict):
+    print("\t\t\tREMOVING HOST " + name)
+    allocation = sysdict['Allocation']
     newHosts = list(filter(lambda x : x.name != name, sysdict['Hosts']))
     sysdict['Hosts'] = newHosts
     newLinks = list(filter(lambda x : x.begin.name != name and x.end.name != name, sysdict['Links']))
     sysdict['Links'] = newLinks
+    newVNFs = list(filter(lambda x : allocation.host(x).name != name, sysdict['VNFs']))
+    sysdict['VNFs'] = newVNFs
+
 
     def updateUID(ls):
         for i, e in enumerate(ls):
@@ -18,7 +23,7 @@ def removeHost(name, sysdict):
     for ll in ["Hosts", "Links"]:
         updateUID(sysdict[ll])
 
-def kfoldhosts(k, sysdict, vtaloc):
+def kfaulthosts(k, sysdict, vtaloc):
     if k != 1:
         raise Exception("Only 1-fold supported")
     results = []

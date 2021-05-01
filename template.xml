@@ -123,7 +123,7 @@ int sliceID;</declaration>
 			<source ref="id0"/>
 			<target ref="id3"/>
 			<label kind="synchronisation" x="-545" y="-76">request?</label>
-			<label kind="assignment" x="-561" y="-42">x=0, AvailableMonitors=AvailableMonitors-1</label>
+			<label kind="assignment" x="-561" y="-42">x=0</label>
 		</transition>
 	</template>
 	<template>
@@ -232,15 +232,7 @@ int numberOfRequests = 0; //Number of requests of each slice respectively</decla
 		<location id="id10" x="153" y="-280">
 			<name x="143" y="-314">NoFreeExecutor</name>
 		</location>
-		<location id="id11" x="229" y="-51">
-			<name x="219" y="-85">NoFreeMonitor</name>
-		</location>
 		<init ref="id7"/>
-		<transition>
-			<source ref="id9"/>
-			<target ref="id11"/>
-			<label kind="guard" x="93" y="-136">AvailableMonitors==0</label>
-		</transition>
 		<transition>
 			<source ref="id9"/>
 			<target ref="id10"/>
@@ -272,12 +264,12 @@ x = 0</label>
 	</template>
 	<template>
 		<name>Generator</name>
-		<location id="id12" x="-17" y="-34">
+		<location id="id11" x="-17" y="-34">
 		</location>
-		<init ref="id12"/>
+		<init ref="id11"/>
 		<transition>
-			<source ref="id12"/>
-			<target ref="id12"/>
+			<source ref="id11"/>
+			<target ref="id11"/>
 			<label kind="synchronisation" x="-153" y="-76">execute!</label>
 			<nail x="-128" y="-111"/>
 			<nail x="-119" y="8"/>
@@ -404,61 +396,61 @@ void releaseBW() //release link bw
 }
  
 </declaration>
-		<location id="id13" x="-501" y="25">
+		<location id="id12" x="-501" y="25">
 			<name x="-511" y="-9">Idle</name>
 		</location>
-		<location id="id14" x="-340" y="25">
+		<location id="id13" x="-340" y="25">
 			<committed/>
 		</location>
-		<location id="id15" x="255" y="17">
+		<location id="id14" x="255" y="17">
 			<name x="272" y="-8">WaitForLink</name>
 			<label kind="invariant" x="272" y="9">x &lt;= delay</label>
 		</location>
-		<location id="id16" x="-119" y="25">
+		<location id="id15" x="-119" y="25">
 			<name x="-161" y="-8">WaitForHost</name>
 		</location>
-		<location id="id17" x="-722" y="25">
+		<location id="id16" x="-722" y="25">
 			<name x="-732" y="-9">ReqCom</name>
 			<committed/>
 		</location>
-		<location id="id18" x="68" y="161">
+		<location id="id17" x="68" y="161">
 			<name x="8" y="187">FinishedExecuting</name>
 		</location>
-		<location id="id19" x="-340" y="161">
+		<location id="id18" x="-340" y="161">
 			<committed/>
 		</location>
-		<location id="id20" x="314" y="161">
+		<location id="id19" x="314" y="161">
 			<name x="280" y="127">NeedRerouting</name>
 		</location>
-		<location id="id21" x="-42" y="-119">
+		<location id="id20" x="-42" y="-119">
 			<name x="-51" y="-153">ErrorQueueFull</name>
 		</location>
-		<init ref="id13"/>
+		<init ref="id12"/>
 		<transition>
-			<source ref="id15"/>
-			<target ref="id21"/>
+			<source ref="id14"/>
+			<target ref="id20"/>
 			<label kind="guard" x="-34" y="-102">len[AllocV[sliceChain[step]]] &gt;= QueueLength</label>
 		</transition>
 		<transition>
-			<source ref="id14"/>
-			<target ref="id21"/>
+			<source ref="id13"/>
+			<target ref="id20"/>
 			<label kind="guard" x="-322" y="-81">len[AllocV[sliceChain[step]]] &gt;= QueueLength</label>
 		</transition>
 		<transition>
-			<source ref="id18"/>
-			<target ref="id20"/>
+			<source ref="id17"/>
+			<target ref="id19"/>
 			<label kind="guard" x="42" y="170">step &lt; slices[sliceID].chainLength and checkBW()==false and monitor&gt;=slices[sliceID].LatReq</label>
 		</transition>
 		<transition>
-			<source ref="id18"/>
-			<target ref="id19"/>
+			<source ref="id17"/>
+			<target ref="id18"/>
 			<label kind="guard" x="-297" y="136">step == slices[sliceID].chainLength</label>
 			<label kind="synchronisation" x="-255" y="170">execute?</label>
 			<label kind="assignment" x="-322" y="161">lastFinishedMonitorId = monitorId</label>
 		</transition>
 		<transition>
-			<source ref="id18"/>
-			<target ref="id15"/>
+			<source ref="id17"/>
+			<target ref="id14"/>
 			<label kind="guard" x="42" y="51">step &lt; slices[sliceID].chainLength and checkBW()</label>
 			<label kind="synchronisation" x="42" y="34">execute?</label>
 			<label kind="assignment" x="42" y="68">requestBW(),
@@ -466,26 +458,26 @@ computeDelay(),
 x=0</label>
 		</transition>
 		<transition>
-			<source ref="id14"/>
-			<target ref="id16"/>
+			<source ref="id13"/>
+			<target ref="id15"/>
 			<label kind="guard" x="-425" y="34">len[AllocV[sliceChain[step]]] &lt; QueueLength</label>
 			<label kind="assignment" x="-289" y="0">queueVNFtoHost()</label>
 		</transition>
 		<transition>
-			<source ref="id17"/>
-			<target ref="id13"/>
+			<source ref="id16"/>
+			<target ref="id12"/>
 			<label kind="assignment" x="-697" y="34">monitor=0,
 AvailableExecutors=AvailableExecutors+1</label>
 		</transition>
 		<transition>
-			<source ref="id16"/>
-			<target ref="id18"/>
+			<source ref="id15"/>
+			<target ref="id17"/>
 			<label kind="synchronisation" x="-221" y="102">done[exeID]?</label>
 			<label kind="assignment" x="-221" y="85">step = step + 1</label>
 		</transition>
 		<transition>
-			<source ref="id19"/>
-			<target ref="id17"/>
+			<source ref="id18"/>
+			<target ref="id16"/>
 			<label kind="guard" x="-680" y="161">monitor&lt;=slices[sliceID].LatReq</label>
 			<label kind="synchronisation" x="-704" y="144">finExe!</label>
 			<label kind="assignment" x="-569" y="127">rqComplete = true</label>
@@ -493,15 +485,15 @@ AvailableExecutors=AvailableExecutors+1</label>
 			<nail x="-722" y="161"/>
 		</transition>
 		<transition>
-			<source ref="id15"/>
-			<target ref="id16"/>
+			<source ref="id14"/>
+			<target ref="id15"/>
 			<label kind="guard" x="-25" y="-34">x==delay &amp;&amp; len[AllocV[sliceChain[step]]] &lt; QueueLength</label>
 			<label kind="assignment" x="-25" y="-17">releaseBW(),
 queueVNFtoHost()</label>
 		</transition>
 		<transition>
-			<source ref="id13"/>
-			<target ref="id14"/>
+			<source ref="id12"/>
+			<target ref="id13"/>
 			<label kind="synchronisation" x="-459" y="-102">reqExe?</label>
 			<label kind="assignment" x="-484" y="-85">rq = true, 
 monitor = 0, 

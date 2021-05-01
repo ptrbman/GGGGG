@@ -9,10 +9,10 @@ import copy
 
 # Returns True if sysdict with allocation and routing meets all deadlines
 # PRE: sysdict should contain Executors and QueueLength
-def verify(sysdict, allocation, routing, verifytaLocation):
+def verify(sysdict, mappings, routing, verifytaLocation):
     ## Generate UPPAAL model
 
-    sysdict['Allocation'] = allocation
+    sysdict['Mappings'] = mappings
     sysdict['Routing'] = routing
 
     EXECUTORS = int(sysdict['Executors'])
@@ -40,58 +40,71 @@ def verify(sysdict, allocation, routing, verifytaLocation):
     raise Exception(msg)
 
 
-# Generate all allocations possible for system in sysdict
-def generate_allocations(sysdict):
-    vnfs = sysdict['VNFs']
-    hosts = sysdict['Hosts']
-
-    options = []
-    for vnf in vnfs:
-        thisOptions = []
-        for host in hosts:
-            if (vnf.Type in host.capabilities):
-                thisOptions.append(host)
-        if not thisOptions: # If any VNF has zero options, no allocations will work
-            return []
-        options.append(thisOptions)
-
-
-    optCount = list(map(len, options))
-    idx = [0]*len(vnfs)
-
-    allAllocations = []
-    totalOptions = 1
-    for o in optCount:
-        totalOptions *= o
-
-    for _ in range(1, totalOptions):
-        ii = copy.deepcopy(idx)
-        allAllocations.append(ii)
-
-        # Increase index
-        increased = False
-        i = 0
-        while not increased:
-            idx[i] += 1
-            if (idx[i] == optCount[i]):
-                idx[i] = 0
+# Depth == 2
+def inc_idx(idx, counts):
+    increased = False
+    i = 0
+    while not increased and i < len(counts):
+        j = 0
+        while not increased and j < len(counts[i]):
+            idx[i][j] += 1
+            if (idx[i][j] == counts[i][j]):
+                idx[i][j] = 0
+                j += 1
             else:
                 increased = True
-            i += 1
-    allAllocations.append(idx)
-
-    allocations = []
-    for alloc in allAllocations:
-        nextAlloc = {}
-        for i in range(0, len(vnfs)):
-            nextAlloc[vnfs[i]] = options[i][alloc[i]]
-        allocations.append(Allocation(nextAlloc))
-
-    return allocations
+        i += 1
+    if increased:
+        return idx
+    else:
+        return None
 
 
-# Generate all possible routings given systme sysdict and allocation alloc
-def generate_routings(sysdict, alloc):
+# Generate all mappings possible for system in sysdict
+def generate_mappings(sysdict):
+    vnfs = sysdict['VNFs']
+    hosts = sysdict['Hosts']
+    chains = sysdict['Chains']
+    alloc = sysdict['Allocation']
+
+    options = []
+    optCount = []
+    idx = []
+    for chain in chains:
+        subMap = []
+        subCount = []
+        subIdx = []
+        for t in chain.types:
+            thisOptions = []
+            thisCount = []
+            for vnf in vnfs:
+                if (vnf.Type == t):
+                    thisOptions.append(vnf)
+            if not thisOptions: # If any VNF has zero options, no allocations will work
+                return []
+            subMap.append(thisOptions)
+            subCount.append(len(thisOptions))
+            subIdx.append(0)
+        options.append(subMap)
+        optCount.append(subCount)
+        idx.append(subIdx)
+
+
+    allMappings = []
+    while idx:
+        mapping = []
+        for chidx in range(0, len(chains)):
+            subMap = []
+            for vnfidx in range(0, len(idx[chidx])):
+                subMap.append(options[chidx][vnfidx][idx[chidx][vnfidx]])
+            mapping.append(Mapping(subMap))
+        allMappings.append(mapping)
+        idx = inc_idx(idx, optCount)
+
+    return allMappings
+
+# Generate all possible routings given systme sysdict and a mapping
+def generate_routings(sysdict, mappings):
     links = sysdict['Links']
     hosts = sysdict['Hosts']
     routing = sysdict['Routing']
@@ -99,6 +112,7 @@ def generate_routings(sysdict, alloc):
     chains = sysdict['Chains']
     vnfs = sysdict['VNFs']
     userEquipments = sysdict['UserEquipments']
+    allocation = sysdict['Allocation']
 
     # All "next steps" from host hId
     def allSteps(h):
@@ -140,11 +154,11 @@ def generate_routings(sysdict, alloc):
 
     # We create a dictionary containing all the paths
     allpaths = {}
+
     for h1 in hosts:
         for h2 in hosts:
             allpaths[(h1, h2)] = allPaths(h1, h2)
             allpaths[(h2, h1)] = allPaths(h2, h1)
-
 
     # routingOptions[i][j] contains all possible routes for slice i on step j
     routingOptions = []
@@ -156,12 +170,15 @@ def generate_routings(sysdict, alloc):
 
     # optPerSlice[i][j] contains all the number of possible routes for slice i on step j
     optPerSlice = []
+    index = 0
     for (s,c) in zip(slices, chains):
         optionSteps = []
         optCount = []
         for i in range(0, len(c.chain)-1):
-            host1 = alloc.alloc[c.chain[i]]
-            host2 = alloc.alloc[c.chain[i+1]]
+            # host1 = alloc.alloc[c.chain[i]]
+            host1 = allocation.host(mappings[index].mapping[i])
+            # host2 = alloc.alloc[c.chain[i+1]]
+            host2 = allocation.host(mappings[index].mapping[i+1])
             opts = getOpts(host1, host2)
             # If there is no path from host1 to host2, there is no routing possible
             if not opts:
@@ -170,6 +187,7 @@ def generate_routings(sysdict, alloc):
             optCount.append(len(opts))
         routingOptions.append(optionSteps)
         optPerSlice.append(optCount)
+        index += 1
 
 
     # Compute total number of routing options and create index
@@ -243,23 +261,23 @@ def generate_routings(sysdict, alloc):
 
 
 # API for verifying allocation
-def VerifyAllocation(sysdict, allocation, verifytaLocation):
-    routings = generate_routings(sysdict, allocation)
+def VerifyAllocation(sysdict, mapping, verifytaLocation):
+    routings = generate_routings(sysdict, mapping)
     for routing in routings:
-        answer = verify(sysdict, allocation, routing, verifytaLocation)
+        answer = verify(sysdict, mapping, routing, verifytaLocation)
         if (answer):
             return routing
     return None
 
 # API For verifying system
 def Verify(sysdict, verifytaLocation):
-    allocations = generate_allocations(sysdict)
+    mappings = generate_mappings(sysdict)
     i = 0
-    for alloc in allocations:
+    for m in mappings:
         i += 1
-        print("Allocation " + str(i) + "/" + str(len(allocations)))
-        r = VerifyAllocation(sysdict, alloc, verifytaLocation)
+        print("Mapping " + str(i) + "/" + str(len(mappings)))
+        r = VerifyAllocation(sysdict, m, verifytaLocation)
         if r:
-            return (alloc, r)
+            return (m, r)
     return None
 

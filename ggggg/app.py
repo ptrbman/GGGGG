@@ -9,7 +9,7 @@ import copy
 from ggggg.uml_to_uppaal import LoadSystem, ToUPPAAL
 from ggggg.run_uppaal import runUPPAAL
 from ggggg.solver import Verify
-from ggggg.kfold import *
+from ggggg.kfault import *
 
 #
 #  THEME
@@ -33,11 +33,11 @@ deffolder = os.getcwd() + '/instances/'
 
 currentInfile = None
 currentSystem = None
-currentAllocation = None
+currentMapping = None
 currentRouting = None
 
-# KFold
-kfoldresults = []
+# Kfault
+kfaultresults = []
 
 #
 #  BINARY LOCATIONS
@@ -147,10 +147,10 @@ verification_layout = [
 
 data = [["-", "-"]]
 
-kfold_layout = [
-    [sg.Text('K-Fold verification', font=header_font)],
+kfault_layout = [
+    [sg.Text('K-fault-tolerance', font=header_font)],
     [sg.Text("Number of hosts to bring down: ", font=font), sg.Text('1', key="txtK", font=font),
-     sg.Button('Check', key='btnKFold', size=(25,1), disabled=True)],
+     sg.Button('Check', key='btnKFault', size=(25,1), disabled=True)],
     [sg.Table(values=data,
               headings=["Removed Host(s)", "Satisfiable"],
               max_col_width=25,
@@ -158,9 +158,9 @@ kfold_layout = [
               alternating_row_color='lightblue',
               num_rows=20,
               enable_events=True,
-              key="kfoldtable"),
-    sg.Text("-", key='txtKFold', font=font, size=(30,15))],
-    [sg.Button('Study', key='btnKFoldStudy', size=(70,3), disabled=True)]
+              key="kfaulttable"),
+    sg.Text("-", key='txtKFault', font=font, size=(30,15))],
+    [sg.Button('Study', key='btnKFaultStudy', size=(70,3), disabled=True)]
 ]
 
 settings_layout = [
@@ -184,9 +184,9 @@ details_layout = [
      sg.Text("Slices:",   key="labelSlices", font=font), sg.Text('--', key="txtSlices",  font=font),
      sg.Text("User Equipment:",   key="labelUEs", font=font), sg.Text('--', key="txtUEs",  font=font),
      sg.Text("Links:",   key="labelLinks", font=font), sg.Text('--', key="txtLinks",  font=font)],
-    [sg.Text("Allocation", font=header_font)],
-    [sg.Text("No allocation", key='txtFindAllocation', font=font, size=(30,15))],
-    [sg.Button('Find allocation', key='btnFindAllocation', size=(70,3), disabled=True)]
+    [sg.Text("Mapping", font=header_font)],
+    [sg.Text("No mapping", key='txtFindMapping', font=font, size=(70,15))],
+    [sg.Button('Find mapping', key='btnFindMapping', size=(70,3), disabled=True)]
 ]
 
 layout = [
@@ -202,7 +202,7 @@ layout = [
 
     [sg.TabGroup([[sg.Tab('Details', details_layout),
                    sg.Tab('Verification', verification_layout),
-                   sg.Tab('KFold', kfold_layout),
+                   sg.Tab('KFault', kfault_layout),
                    sg.Tab('Settings', settings_layout)
                    ]],
                  tab_background_color='white',
@@ -217,8 +217,8 @@ def set_stage(stage):
         window['txtExecutors'].update(disabled=False)
         window['txtQueue'].update(disabled=False)
         window['generateUPPAAL'].update(disabled=False)
-        window['btnFindAllocation'].update(disabled=False)
-        window['btnKFold'].update(disabled=False)
+        window['btnFindMapping'].update(disabled=False)
+        window['btnKFault'].update(disabled=False)
 
         ## Disable stage 2 (in case previously enabled)
         window['Preview'].update(disabled=True)
@@ -253,19 +253,22 @@ def load_instance(infile):
 
 # Generate a UPPAAL model from instance in infile with executors and queueLength
 def generate_uppaal(infile, sysdict, executors, queueLength):
-    modelName = os.path.splitext(os.path.basename(infile))[0]
-    uppaalFile = os.getcwd() + '/models/' + modelName + '.xml'
-    sysdict['Allocation'] = currentAllocation
-    sysdict['Routing'] = currentRouting
-    ToUPPAAL(sysdict, uppaalFile, executors, queueLength)
+    if not currentMapping:
+        sg.Popup("Cannot create UPPAAL model until mapping has been found.")
+    else:
+        modelName = os.path.splitext(os.path.basename(infile))[0]
+        uppaalFile = os.getcwd() + '/models/' + modelName + '.xml'
+        sysdict['Mappings'] = currentMapping
+        sysdict['Routing'] = currentRouting
+        ToUPPAAL(sysdict, uppaalFile, executors, queueLength)
 
-    queryFileNames = genQueries(sysdict, modelName)
-    window['txtDeadlinesQuery'].update(value=queryFileNames[0])
-    window['txtQueuesQuery'].update(value=queryFileNames[1])
-    window['txtDeadlockQuery'].update(value=queryFileNames[2])
-    window['txtExecutorQuery'].update(value=queryFileNames[3])
-    window['txtUPPAALFile'].update(value=uppaalFile)
-    set_stage(2)
+        queryFileNames = genQueries(sysdict, modelName)
+        window['txtDeadlinesQuery'].update(value=queryFileNames[0])
+        window['txtQueuesQuery'].update(value=queryFileNames[1])
+        window['txtDeadlockQuery'].update(value=queryFileNames[2])
+        window['txtExecutorQuery'].update(value=queryFileNames[3])
+        window['txtUPPAALFile'].update(value=uppaalFile)
+        set_stage(2)
 
 # Opens UPPAAL to study file modelFile
 def preview(uppaalLocation, modelFile):
@@ -284,28 +287,32 @@ def verify(uppaalfile, query, queryfile):
     window['label' + query].update(answers[0][1])
     window['btn' + query].update(disabled=True)
 
-def find_allocation(sysdict, executors, queue):
+def find_mapping(sysdict, executors, queue):
     sysdict['Executors'] = executors
     sysdict['QueueLength'] = queue
 
     # TODO: What if nothing found?
-    (a, r) = Verify(sysdict, verifytaLocation)
-    window['txtFindAllocation'].update(a)
-    return (a, r)
+    (mappings, r) = Verify(sysdict, verifytaLocation)
+    msg = ""
+    for (s, mm) in zip(sysdict['Slices'], mappings):
+        msg += s.name + ": " + "->".join(list(map(lambda v : v.name, mm.mapping))) + "\n"
 
-def kfold(sysdict, executors, queue):
-    global kfoldresults
+    window['txtFindMapping'].update(msg)
+    return (mappings, r)
+
+def kfault(sysdict, executors, queue):
+    global kfaultresults
     sysdict['Executors'] = executors
     sysdict['QueueLength'] = queue
-    kfoldresults = kfoldhosts(1, sysdict, verifytaLocation)
+    kfaultresults = kfaulthosts(1, sysdict, verifytaLocation)
     tableData = []
-    for (h, r, s) in kfoldresults:
+    for (h, r, s) in kfaultresults:
         if r:
             tableData.append([h.name, "SAT"])
         else:
             tableData.append([h.name, "UNSAT"])
-    window['kfoldtable'].update(tableData)
-    window['btnKFoldStudy'].update(disabled=True)
+    window['kfaulttable'].update(tableData)
+    window['btnKFaultStudy'].update(disabled=True)
 
 while True:
     event, values = window.read()
@@ -319,10 +326,10 @@ while True:
         currentInfile = values['InstanceFile']
         currentSystem = load_instance(currentInfile)
         (a, r) = (currentSystem['Allocation'], currentSystem['Routing'])
-        if a and r:
-            currentAllocation = a
-            currentRouting = rr
-            window['txtFindAllocation'].update(currentAllocation)
+        # if a and r:
+            # currentMapping = a
+            # currentRouting = rr
+            # window['txtFindMapping'].update(currentMapping)
 
     ### GENERATE MODEL ###
     elif event == 'generateUPPAAL':
@@ -356,37 +363,37 @@ while True:
         queryfile = values['txtExecutorQuery']
         verify(uppaalfile, "Executor", queryfile)
 
-    ### FIND ALLOCATIONS ###
-    elif event == 'btnFindAllocation':
-        (a, r) = find_allocation(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
-        currentAllocation = a
+    ### FIND MAPPINGS ###
+    elif event == 'btnFindMapping':
+        (a, r) = find_mapping(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
+        currentMapping = a
         currentRouting = r
 
-    ### KFOLD ###
-    elif event == 'btnKFold':
-        kfold(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
-        window['btnKFold'].update(disabled=True)
+    ### KFAULT ###
+    elif event == 'btnKFault':
+        kfault(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
+        window['btnKFault'].update(disabled=True)
 
-    elif event == 'kfoldtable':
-        if kfoldresults:
+    elif event == 'kfaulttable':
+        if kfaultresults:
         ## If multiple are selected, pick first one
-            selected = values['kfoldtable'][0]
-            (h, r, s) = kfoldresults[selected]
+            selected = values['kfaulttable'][0]
+            (h, r, s) = kfaultresults[selected]
             if r:
                 (a, r) = r
-                window['txtKFold'].update(a)
+                window['txtKFault'].update(a)
             else:
-                window['txtKFold'].update("No allocation found")
-            window['btnKFoldStudy'].update(disabled=False)
+                window['txtKFault'].update("No mapping found")
+            window['btnKFaultStudy'].update(disabled=False)
 
-    elif event == 'btnKFoldStudy':
-        selected = values['kfoldtable'][0]
-        uppaalFile = os.getcwd() + '/tmp/kfoldstudy.xml'
-        (h, res, s) = kfoldresults[selected]
+    elif event == 'btnKFaultStudy':
+        selected = values['kfaulttable'][0]
+        uppaalFile = os.getcwd() + '/tmp/kfaultstudy.xml'
+        (h, res, s) = kfaultresults[selected]
         if res:
             (a, r) = res
             newDict = s
-            newDict['Allocation'] = a
+            newDict['Mapping'] = a
             newDict['Routing'] = r
             ToUPPAAL(newDict, uppaalFile, int(values['txtExecutors']), int(values['txtQueue']))
             preview(values['uppaalLocation'], uppaalFile)
