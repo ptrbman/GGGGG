@@ -281,11 +281,6 @@ def LoadSystem(infile, verbose=False):
     return sysdict
 
 
-
-
-
-
-
 # UMLtoUPPAAL
 # Takes a [sysdict] and outputs a UPPAAL model to [outfile]. [executorCount] and [queueLength] are used as additional parameters of the translation. If [verbose] lots of extra output is printed to stdout.
 

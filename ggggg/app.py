@@ -164,7 +164,7 @@ kfault_layout = [
               num_rows=20,
               enable_events=True,
               key="kfaulttable"),
-    sg.Text("-", key='txtKFault', font=font, size=(30,15))],
+    sg.Text("-------------------------------------------------------------------------------", key='txtKFault', font=font, size=(45,15))],
     [sg.Button('Study', key='btnKFaultStudy', size=(70,3), disabled=True)]
 ]
 
@@ -385,8 +385,12 @@ while True:
             selected = values['kfaulttable'][0]
             (h, r, s) = kfaultresults[selected]
             if r:
-                (a, r) = r
-                window['txtKFault'].update(a)
+                (mappings, r) = r
+                msg = ""
+                sysdict = currentSystem
+                for (s, mm) in zip(sysdict['Slices'], mappings):
+                    msg += s.name + ": " + "->".join(list(map(lambda v : v.name, mm.mapping))) + "\n"
+                window['txtKFault'].update(msg)
             else:
                 window['txtKFault'].update("No mapping found")
             window['btnKFaultStudy'].update(disabled=False)
