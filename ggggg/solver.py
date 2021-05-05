@@ -263,7 +263,10 @@ def generate_routings(sysdict, mappings):
 # API for verifying allocation
 def VerifyAllocation(sysdict, mapping, verifytaLocation):
     routings = generate_routings(sysdict, mapping)
+    j = 0
     for routing in routings:
+        j += 1
+        print("\tRouting " + str(j) + "/" + str(len(routings)))
         answer = verify(sysdict, mapping, routing, verifytaLocation)
         if (answer):
             return routing

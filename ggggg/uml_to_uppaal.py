@@ -54,7 +54,7 @@ def LoadSystem(infile, verbose=False):
         if attr in assignments[i]:
             return assignments[i][attr]
         else:
-            errors.append("Object " + names[i] + " has undefined attribute " + attr)
+            # errors.append("Object " + names[i] + " has undefined attribute " + attr)
             return None
 
     # We have to do some nasty things due to how USE creates soil-scripts

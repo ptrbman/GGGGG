@@ -78,7 +78,7 @@ class UserEquipment:
     def __init__(self, i, maxInst=-1, actTime=-1, subscribedSlice=-1):
         self.i = i
         self.maxInst = maxInst
-        self.actTime = actTime,
+        self.actTime = actTime
         self.subscribedSlice = subscribedSlice
 
 class Slice:
