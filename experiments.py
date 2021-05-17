@@ -9,10 +9,10 @@ import time
 ## CONFIGURE THESE
 vtaloc = "/Applications/uppaal64-4.1.24/bin-Darwin/verifyta"
 
-(LB1, UB1) = (1, 1)
-(LB2, UB2) = (1, 1)
-(LB3, UB3) = (1, 1)
-(LB4, UB4) = (1, 10)
+(LB1, UB1) = (1, 3)
+(LB2, UB2) = (1, 3)
+(LB3, UB3) = (1, 100)
+(LB4, UB4) = (1, 1000)
 
 executors = 4
 queue_length = 4
