@@ -3,50 +3,49 @@
 !new Host('CompHost1')
 !CompHost1.Capabilities := Set {'BBU','EPA','UPF','EC', 'DN(e)'}
 !CompHost1.MECHost := false
-!CompHost1.CPUResources := 0
-!CompHost1.StorageResources := 0
+!CompHost1.CPUResources := 3500
+!CompHost1.MemoryResources := 32
 
 !new Host('CompHost2')
 !CompHost2.Capabilities := Set {'CPF','DN(c)'}
 !CompHost2.MECHost := false
-!CompHost2.CPUResources := 0
-!CompHost2.StorageResources := 0
+!CompHost2.CPUResources := 3500
+!CompHost2.MemoryResources := 32
 
 !new Host('CompHost3')
 !CompHost3.Capabilities := Set {'CPF','DN(c)'}
 !CompHost3.MECHost := false
-!CompHost3.CPUResources := 0
-!CompHost3.StorageResources := 0
+!CompHost3.CPUResources := 3500
+!CompHost3.MemoryResources := 32
 
 !new Host('CompHost4')
 !CompHost4.Capabilities := Set {'BBU','EPA','UPF','EC','DN(e)'}
 !CompHost4.MECHost := false
-!CompHost4.CPUResources := 0
-!CompHost4.StorageResources := 0
-
+!CompHost4.CPUResources := 3500
+!CompHost4.MemoryResources := 32
 
 !new Host('RouteHost1')
 !RouteHost1.Capabilities := Set {}
-!RouteHost1.CPUResources := 0
-!RouteHost1.StorageResources := 0
+!RouteHost1.CPUResources := 300
+!RouteHost1.MemoryResources := 1
 !RouteHost1.MECHost := false
 
 !new Host('RouteHost2')
 !RouteHost2.Capabilities := Set {}
-!RouteHost2.CPUResources := 0
-!RouteHost2.StorageResources := 0
+!RouteHost2.CPUResources := 300
+!RouteHost2.MemoryResources := 1
 !RouteHost2.MECHost := false
 
 !new Host('RouteHost3')
 !RouteHost3.Capabilities := Set {}
-!RouteHost3.CPUResources := 0
-!RouteHost3.StorageResources := 0
+!RouteHost3.CPUResources := 300
+!RouteHost3.MemoryResources := 1
 !RouteHost3.MECHost := false
 
 !new Host('RouteHost4')
 !RouteHost4.Capabilities := Set {}
-!RouteHost4.CPUResources := 0
-!RouteHost4.StorageResources := 0
+!RouteHost4.CPUResources := 300
+!RouteHost4.MemoryResources := 1
 !RouteHost4.MECHost := false
 
 !insert (CompHost1,RouteHost1) into Link
@@ -170,7 +169,7 @@
 !new Slice('Slice2')
 !Slice2.VNFs := Sequence {'BBU','UPF','DN(e)','CPF'}
 !Slice2.BWRequirement := 1
-!Slice2.LatencyRequirement := 1000
+!Slice2.LatencyRequirement := 150
 
 
 !new UserEquipment('UE1')

@@ -21,20 +21,20 @@ class VNF:
         return "VNF<" + str(self.i) + ", " + str(self.uid) + ", " + str(self.BCET) + ", " + str(self.WCET) + ", " + str(self.Prio) + ", " + str(self.Type) + ">"
 
 class Host:
-    def __init__(self, i, name, uid, cpu=-1, stor=-1, mec="", capabilities = []):
+    def __init__(self, i, name, uid, cpu=-1, mem=-1, mec="", capabilities = []):
         self.i = i
         self.name = name
         self.uid = uid
         self.cpu = cpu
-        self.stor = stor
+        self.mem = mem
         self.mec = mec
         self.capabilities = capabilities
 
     def __str__(self):
-        return "HOST<" + self.name + ", " + str(self.i) + ", " + str(self.uid) + ", " + str(self.cpu) + ", " + str(self.stor) + ", " + str(self.mec) + ", " + str(self.capabilities) + ">"
+        return "HOST<" + self.name + ", " + str(self.i) + ", " + str(self.uid) + ", " + str(self.cpu) + ", " + str(self.mem) + ", " + str(self.mec) + ", " + str(self.capabilities) + ">"
 
     def t(self):
-        return "{" + str(self.uid) + ", " + str(self.cpu) + ", " + str(self.stor) + ", " + str(self.mec) + "}"
+        return "{" + str(self.uid) + ", " + str(self.cpu) + ", " + str(self.mem) + ", " + str(self.mec) + "}"
 
 class Link:
     def __init__(self, i, uid, begin, end, bw=-1, delay=-1):

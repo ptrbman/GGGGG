@@ -111,7 +111,8 @@ int sliceID;</declaration>
 			<source ref="id3"/>
 			<target ref="id1"/>
 			<label kind="synchronisation" x="-238" y="-76">reqExe!</label>
-			<label kind="assignment" x="-296" y="-51">lastRequestMonitorId = MId</label>
+			<label kind="assignment" x="-296" y="-51">lastRequestMonitorId = MId,
+sliceID = lastRequestSliceId</label>
 			<nail x="-195" y="-51"/>
 		</transition>
 		<transition>

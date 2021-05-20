@@ -188,7 +188,7 @@ def LoadSystem(infile, verbose=False):
     # Attribute assignments are parsed in a general way and here assigned to correct member
     for h in hosts:
         h.cpu = attr(h.i, 'CPUResources')
-        h.stor = attr(h.i, 'StorageResources')
+        h.mem = attr(h.i, 'MemoryResources')
         h.mec = attr(h.i, 'MECHost')
         capString = attr(h.i, 'Capabilities')
         m = re.search("Set {(.*)}", capString).group(1).split(',')
