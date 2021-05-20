@@ -162,7 +162,7 @@
 
 
 !new Slice('Slice1')
-!Slice1.VNFs := Sequence {'BBU',UPF','EPA','EC','CPF','DN(c)'}
+!Slice1.VNFs := Sequence {'BBU','UPF','EPA','EC','CPF','DN(c)'}
 !Slice1.BWRequirement := 1
 !Slice1.LatencyRequirement := 200
 
@@ -170,7 +170,6 @@
 !UE1.MaxInstantiation := 1
 !UE1.ActivationTime := 10
 !insert (UE1,Slice1) into Subscription
-
 
 !insert (BBU1,CompHost1) into Allocation
 !insert (EPA1,CompHost1) into Allocation
