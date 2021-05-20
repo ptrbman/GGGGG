@@ -7,11 +7,14 @@ from ggggg.fiveg import *
 
 import copy
 
+checks = 0
+
 # Returns True if sysdict with allocation and routing meets all deadlines
 # PRE: sysdict should contain Executors and QueueLength
 def verify(sysdict, mappings, routing, verifytaLocation):
     ## Generate UPPAAL model
-
+    global checks
+    checks = checks + 1
     sysdict['Mappings'] = mappings
     sysdict['Routing'] = routing
 
@@ -274,6 +277,8 @@ def VerifyAllocation(sysdict, mapping, verifytaLocation):
 
 # API For verifying system
 def Verify(sysdict, verifytaLocation):
+    global checks
+    checks = 0
     mappings = generate_mappings(sysdict)
     i = 0
     for m in mappings:
@@ -281,6 +286,8 @@ def Verify(sysdict, verifytaLocation):
         print("Mapping " + str(i) + "/" + str(len(mappings)))
         r = VerifyAllocation(sysdict, m, verifytaLocation)
         if r:
+            print("Checks: " + str(checks))
             return (m, r)
+    print("Checks: " + str(checks))
     return None
 
