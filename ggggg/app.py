@@ -164,7 +164,7 @@ kfault_layout = [
               num_rows=20,
               enable_events=True,
               key="kfaulttable"),
-    sg.Text("-------------------------------------------------------------------------------", key='txtKFault', font=font, size=(45,15))],
+    sg.Text("", key='txtKFault', font=font, size=(35,15))],
     [sg.Button('Study', key='btnKFaultStudy', size=(70,3), disabled=True)]
 ]
 
@@ -190,7 +190,7 @@ details_layout = [
      sg.Text("User Equipment:",   key="labelUEs", font=font), sg.Text('--', key="txtUEs",  font=font),
      sg.Text("Links:",   key="labelLinks", font=font), sg.Text('--', key="txtLinks",  font=font)],
     [sg.Text("Mapping", font=header_font)],
-    [sg.Text("No mapping", key='txtFindMapping', font=font, size=(70,15))],
+    [sg.Text("No mapping", key='txtFindMapping', font=font, size=(50,15))],
     [sg.Button('Find mapping', key='btnFindMapping', size=(70,3), disabled=True)]
 ]
 
@@ -198,7 +198,6 @@ layout = [
     [sg.Column([[sg.Image("ggggg/resources/logo.png")]], justification='center')],
 
     ## LOAD INSTANCE ##
-    [sg.Text('Load Instance', font=header_font)],
     [sg.Input('', key='InstanceFile', enable_events=True, visible=False, font=font),
      sg.FileBrowse(button_text="Load Instance", font=font, initial_folder=deffolder, target='InstanceFile'),
      sg.Text('Instance name:', font=font), sg.Text('n/a', key='labelInstanceName', size=(30,1), font=font)],
