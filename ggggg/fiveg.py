@@ -134,7 +134,8 @@ class Mapping:
         return "Mapping<" + str(list(map(lambda c : c.name, self.mapping))) + ">"
 
     def t(self, maxChainLength, allocation):
-        ids = list(map(lambda c : str(allocation.host(c).uid), self.mapping))
+        # ids = list(map(lambda c : str(allocation.host(c).uid), self.mapping))
+        ids = list(map(lambda c : str(c.uid), self.mapping))
         padded = ids + (['-1']*(maxChainLength - len(ids)))
         return "{" + ', '.join(padded) + "}"
 

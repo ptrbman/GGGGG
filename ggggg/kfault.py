@@ -20,7 +20,7 @@ def removeHost(name, sysdict):
             e.uid = i
 
     ### UPDATE uis
-    for ll in ["Hosts", "Links"]:
+    for ll in ["Hosts", "Links", "VNFs"]:
         updateUID(sysdict[ll])
 
 def kfaulthosts(k, sysdict, vtaloc):

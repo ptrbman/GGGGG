@@ -153,7 +153,7 @@ verification_layout = [
 data = [["-", "-"]]
 
 kfault_layout = [
-    [sg.Text('K-fault-tolerance', font=header_font)],
+    [sg.Text('K-Fault Tolerance', font=header_font)],
     [sg.Text("Number of hosts to bring down: ", font=font), sg.Text('1', key="txtK", font=font),
      sg.Button('Check', key='btnKFault', size=(25,1), disabled=True)],
     [sg.Table(values=data,
@@ -206,7 +206,7 @@ layout = [
 
     [sg.TabGroup([[sg.Tab('Details', details_layout),
                    sg.Tab('Verification', verification_layout),
-                   sg.Tab('KFault', kfault_layout),
+                   sg.Tab('K-Fault', kfault_layout),
                    sg.Tab('Settings', settings_layout)
                    ]],
                  tab_background_color='white',

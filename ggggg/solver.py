@@ -269,7 +269,8 @@ def VerifyAllocation(sysdict, mapping, verifytaLocation):
     j = 0
     for routing in routings:
         j += 1
-        print("\tRouting " + str(j) + "/" + str(len(routings)))
+        print('.', end='', flush=True)
+        # print("\tRouting " + str(j) + "/" + str(len(routings)))
         answer = verify(sysdict, mapping, routing, verifytaLocation)
         if (answer):
             return routing

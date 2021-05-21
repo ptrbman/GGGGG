@@ -118,7 +118,7 @@ sliceID = lastRequestSliceId</label>
 		<transition>
 			<source ref="id1"/>
 			<target ref="id2"/>
-			<label kind="guard" x="-136" y="-42">x&gt;=slices[sliceID].LatReq</label>
+			<label kind="guard" x="-136" y="-42">x&gt;slices[sliceID].LatReq</label>
 		</transition>
 		<transition>
 			<source ref="id0"/>
