@@ -16,7 +16,9 @@ def runUPPAAL(verifytaLocation, infile, queryfile, outputfile, verbose=False):
     queryPath = str(Path(queryfile).absolute())
     outPath = str(Path(outputfile).absolute())
     # cmd = "\"" + verifytaLocation + "\" \"" + str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
-    cmd = "\"" + cmdPath + "\" \"" + inPath + "\" \"" + queryPath + "\" > " + "\"" + outPath + "\""
+    
+    cmd = cmdPath + " " + inPath + " " + queryPath +  " > " + outPath
+    print("\n\t", cmd)
     os.system(cmd)
 
     f = open(outPath, "r")

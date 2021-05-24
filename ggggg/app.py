@@ -5,6 +5,7 @@ import PySimpleGUI as sg
 import os
 import string
 import copy
+from pathlib import Path
 
 from ggggg.uml_to_uppaal import LoadSystem, ToUPPAAL
 from ggggg.run_uppaal import runUPPAAL
@@ -29,7 +30,7 @@ textColor = 'black'
 window = ""
 
 # These are used as standard values upon startup.
-deffolder = os.getcwd() + '/instances/'
+deffolder = Path(os.getcwd() + '/instances/')
 
 currentInfile = None
 currentSystem = None
@@ -199,7 +200,7 @@ layout = [
 
     ## LOAD INSTANCE ##
     [sg.Input('', key='InstanceFile', enable_events=True, visible=False, font=font),
-     sg.FileBrowse(button_text="Load Instance", font=font, initial_folder=deffolder, target='InstanceFile'),
+     sg.FileBrowse(button_text="Load Instance", font=font, initial_folder=str(deffolder.absolute()), target='InstanceFile'),
      sg.Text('Instance name:', font=font), sg.Text('n/a', key='labelInstanceName', size=(30,1), font=font)],
 
     [sep(100)],
