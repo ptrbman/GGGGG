@@ -276,12 +276,16 @@ def generate_uppaal(infile, sysdict, executors, queueLength):
         set_stage(2)
 
 # Opens UPPAAL to study file modelFile
-def preview(uppaalLocation, modelFile):
-    currentDir = os.getcwd()
-    uppaalDir = os.path.dirname(uppaalLocation)
-    os.chdir(uppaalDir)
-    uppaalCmd = "./uppaal"
-    cmd = uppaalCmd + " \"" + modelFile + "\""
+def preview(uppaalfile, modelFile):
+    currentDir = str(Path(os.getcwd()).absolute())
+    uppaalDir = Path(os.path.dirname(uppaalfile))
+    modelPath = str(Path(modelFile).absolute())
+    os.chdir(str(uppaalDir.absolute()))
+    #uppaalCmd = "./uppaal"
+    uppaalCmd = str(Path(uppaalfile).absolute())
+    cmd = uppaalCmd + " " + modelPath 
+    print("\n\t", cmd)
+    # cmd = "\"" + uppaalCmd + "\"" # \"" //+ str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
     os.system(cmd)
     os.chdir(currentDir)
 
