@@ -1,6 +1,7 @@
 import subprocess
 import re
 import os
+from pathlib import Path
 
 # Remove strange characters from output when parsing results
 def escape_ansi(line):
@@ -10,10 +11,15 @@ def escape_ansi(line):
 
 # Runs verifyta on infile and queryfile, and parses result to figure out the answers
 def runUPPAAL(verifytaLocation, infile, queryfile, outputfile, verbose=False):
-    cmd = "\"" + verifytaLocation + "\" \"" + str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
+    cmdPath = str(Path(verifytaLocation).absolute())
+    inPath = str(Path(infile).absolute())
+    queryPath = str(Path(queryfile).absolute())
+    outPath = str(Path(outputfile).absolute())
+    # cmd = "\"" + verifytaLocation + "\" \"" + str(infile) + "\" \"" + queryfile + "\" > " + "\"" + outputfile + "\""
+    cmd = "\"" + cmdPath + "\" \"" + inPath + "\" \"" + queryPath + "\" > " + "\"" + outPath + "\""
     os.system(cmd)
 
-    f = open(outputfile, "r")
+    f = open(outPath, "r")
     answers = []
     curquery = -1
     for ll in f:
