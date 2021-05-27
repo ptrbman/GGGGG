@@ -7,16 +7,17 @@ Simple tool for transforming 5G UML models to UPPAAL models.
 ## Prerequisites
 You need Python (it has been tested with 3.7.6) as well as pip (python package installation tool). Moreover, it is also required to have UPPAAL [1] available on your computer.
 
-## Installation instructions
+## Installation instructions (MacOS/Linux)
 Retrieve the source code by downloading (and extracting) ZIP-archive or using git:
 
 ```console
 git clone https://github.com/ptrbman/GGGGG.git
 ```
 
-Afterwards, it is recommended to create a virtual environment. Change directory to the root folder of GGGGG and run the following commands (on Linux/MacOS):
+Afterwards, it is recommended to create a virtual environment:
 
 ```console
+cd GGGGG
 python -m venv pyenv
 source pyenv/bin/activate
 ```
@@ -26,10 +27,31 @@ Now install the required packages using pip:
 ```console
 pip install -r requirements.txt
 ```
+Start the program by running the following in the root directory of the application:
+```console
+python -m ggggg
+```
 
-Now the software is ready to use!
+## Installation instructions (Windows)
+Retrieve the source code by downloading (and extracting) ZIP-archive or using git:
 
-# Running
+```console
+git clone https://github.com/ptrbman/GGGGG.git
+```
+
+Afterwards, it is recommended to create a virtual environment:
+
+```console
+cd GGGGGG
+py -m venv pyenv
+pyenv\Scripts\activate
+```
+
+Now install the required packages using pip:
+
+```console
+pip install -r requirements.txt
+```
 
 Start the program by running the following in the root directory of the application:
 ```console
