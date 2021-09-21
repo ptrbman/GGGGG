@@ -23,14 +23,14 @@ def removeHost(name, sysdict):
     for ll in ["Hosts", "Links", "VNFs"]:
         updateUID(sysdict[ll])
 
-def kfaulthosts(k, sysdict, vtaloc):
+def kfaulthosts(k, sysdict, solver, binloc):
     if k != 1:
         raise Exception("Only 1-fold supported")
     results = []
     for h in sysdict['Hosts']:
         newDict = copy.deepcopy(sysdict)
         removeHost(h.name, newDict)
-        result = Verify(newDict, vtaloc)
+        result = Verify(newDict, solver, binloc)
         results.append((h, result, newDict))
     return results
 

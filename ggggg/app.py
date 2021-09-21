@@ -12,6 +12,8 @@ from ggggg.run_uppaal import runUPPAAL
 from ggggg.solver import Verify
 from ggggg.kfault import *
 
+from ggggg.solver import SOLVER_Z3, SOLVER_UPPAAL
+
 #
 #  THEME
 #
@@ -46,14 +48,17 @@ kfaultresults = []
 
 uppaalLocation = ''
 verifytaLocation = ''
+z3Location = ''
 
 # Load "config.txt" and grab binary locations
 def loadConfig():
     global uppaalLocation
     global verifytaLocation
+    global z3Location
     f = open("config.txt", "r")
     uppaalLocation = f.readline().strip()
     verifytaLocation = f.readline().strip()
+    z3Location = f.readline().strip()
     f.close()
 
 loadConfig()
@@ -63,6 +68,7 @@ def saveConfig():
     f = open("config.txt", "w")
     f.write(uppaalLocation +"\n")
     f.write(verifytaLocation +"\n")
+    f.write(z3Location +"\n")
     f.close()
 
 #
@@ -171,6 +177,8 @@ kfault_layout = [
 
 settings_layout = [
     [sg.Text("Settings", font=header_font)],
+    [sg.Text("Solver", font=font)],
+    [sg.Radio("UPPAAL", 'RadioSolver', default=True, key='RadioUPPAAL'),sg.Radio("Z3", 'RadioSolver', default=False, key='RadioZ3')],
     [sg.Text("UPPAAL Location", font=font)],
     [sg.Input(uppaalLocation, key='uppaalLocation', font=font, enable_events=True),
      sg.FileBrowse(button_text="Browse", font=font, target='uppaalLocation', initial_folder=uppaalLocation)],
@@ -180,7 +188,10 @@ settings_layout = [
     [sg.Text("Executors/Monitors: ", key="labelExecutorMonitor", font=font),
      sg.Input('2', key='txtExecutors', font=font, size=(4,1)),
      sg.Text("Message Queue Length: ", key="labelQueue", font=font),
-     sg.Input('3', key='txtQueue', font=font, size=(4,1))]
+     sg.Input('3', key='txtQueue', font=font, size=(4,1))],
+    [sg.Text("z3 Location", font=font)],
+     [sg.Input(z3Location, key='z3Location', font=font, enable_events=True),
+      sg.FileBrowse(button_text="Browse", font=font, target='z3Location', initial_folder=z3Location)],
 ]
 
 details_layout = [
@@ -301,19 +312,34 @@ def find_mapping(sysdict, executors, queue):
     sysdict['QueueLength'] = queue
 
     # TODO: What if nothing found?
-    (mappings, r) = Verify(sysdict, verifytaLocation)
-    msg = ""
-    for (s, mm) in zip(sysdict['Slices'], mappings):
-        msg += s.name + ": " + "->".join(list(map(lambda v : v.name, mm.mapping))) + "\n"
+    ret = doVerify(sysdict)
+    if ret:
+        (mappings, r) = ret
+        msg = ""
+        for (s, mm) in zip(sysdict['Slices'], mappings):
+            msg += s.name + ": " + "->".join(list(map(lambda v : v.name, mm.mapping))) + "\n"
 
-    window['txtFindMapping'].update(msg)
-    return (mappings, r)
+        window['txtFindMapping'].update(msg)
+        return (mappings, r)
+    else:
+        msg = "No mapping found"
+        window['txtFindMapping'].update(msg)
+        return None
 
 def kfault(sysdict, executors, queue):
     global kfaultresults
     sysdict['Executors'] = executors
     sysdict['QueueLength'] = queue
-    kfaultresults = kfaulthosts(1, sysdict, verifytaLocation)
+
+    if values['RadioZ3'] == True:
+        solver = SOLVER_Z3
+        binLocation = z3Location
+
+    if values['RadioUPPAAL'] == True:
+        solver = SOLVER_UPPAAL
+        binLocation = verifytaLocation
+
+    kfaultresults = kfaulthosts(1, sysdict, solver, binLocation)
     tableData = []
     for (h, r, s) in kfaultresults:
         if r:
@@ -322,6 +348,18 @@ def kfault(sysdict, executors, queue):
             tableData.append([h.name, "UNSAT"])
     window['kfaulttable'].update(tableData)
     window['btnKFaultStudy'].update(disabled=True)
+
+def doVerify(sysdict):
+    if values['RadioZ3'] == True:
+        solver = SOLVER_Z3
+        binLocation = z3Location
+
+    if values['RadioUPPAAL'] == True:
+        solver = SOLVER_UPPAAL
+        binLocation = verifytaLocation
+
+    return Verify(sysdict, solver, binLocation)
+
 
 while True:
     event, values = window.read()
@@ -374,9 +412,11 @@ while True:
 
     ### FIND MAPPINGS ###
     elif event == 'btnFindMapping':
-        (a, r) = find_mapping(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
-        currentMapping = a
-        currentRouting = r
+        ret = find_mapping(currentSystem, int(values['txtExecutors']), int(values['txtQueue']))
+        if ret:
+            (a, r) = ret
+            currentMapping = a
+            currentRouting = r
 
     ### KFAULT ###
     elif event == 'btnKFault':
@@ -423,6 +463,12 @@ while True:
     elif event == 'verifytaLocation':
         if (values['verifytaLocation'] != ''):
             verifytaLocation = values['verifytaLocation']
+            saveConfig()
+
+    ### CHANGE Z3LOCATION ###
+    elif event == 'z3Location':
+        if (values['z3Location'] != ''):
+            verifytaLocation = values['z3Location']
             saveConfig()
 
 

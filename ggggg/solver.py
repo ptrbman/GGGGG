@@ -4,44 +4,75 @@
 from ggggg.uml_to_uppaal import ToUPPAAL
 from ggggg.run_uppaal import runUPPAAL
 from ggggg.fiveg import *
+from ggggg.smt import verify_smt
 
 import copy
 
+OUTPUT_DEBUG = True
+
 checks = 0
 
-# Returns True if sysdict with allocation and routing meets all deadlines
-# PRE: sysdict should contain Executors and QueueLength
-def verify(sysdict, mappings, routing, verifytaLocation):
-    ## Generate UPPAAL model
-    global checks
-    checks = checks + 1
-    sysdict['Mappings'] = mappings
-    sysdict['Routing'] = routing
+## Solvers
+SOLVER_UPPAAL = 1
+SOLVER_Z3 = 2
+SOLVER_BOTH = 3
 
+def solveUPPAAL(sysdict, binLocation):
+    global checks
+
+    ## Generate UPPAAL model
     EXECUTORS = int(sysdict['Executors'])
     QUEUE = int(sysdict['QueueLength'])
     modelFileName = "tmp/verify.xml"
+    if OUTPUT_DEBUG:
+        modelFileName = "debug/verify_" + str(checks) + ".xml"
     ToUPPAAL(sysdict, modelFileName, EXECUTORS, QUEUE)
 
     ## Create query file
     queryFileName = "tmp/verify.q"
+    if OUTPUT_DEBUG:
+        queryFileName = "debug/verify_" + str(checks) + ".q"
     f = open(queryFileName, "w")
     f.write("A[] not M0.MissedDeadline")
     f.close()
 
     ## Run UPPAAL
     outputFileName = "tmp/verify.out"
-    answers = runUPPAAL(verifytaLocation, modelFileName, queryFileName, outputFileName)
-
+    answers = runUPPAAL(binLocation, modelFileName, queryFileName, outputFileName)
     ret = answers[0][1]
     if (ret == "sat"):
         return True
     elif (ret == "unsat"):
         return False
+    else:
+        msg = "Unknown answer: " + ret
+        raise Exception(msg)
 
-    msg = "Unknown answer: " + ret
-    raise Exception(msg)
 
+# Returns True if sysdict with allocation and routing meets all deadlines
+# PRE: sysdict should contain Executors and QueueLength
+def verify(sysdict, mappings, routing, solver, binLocation):
+    global checks
+    checks = checks + 1
+
+    sysdict['Mappings'] = mappings
+    sysdict['Routing'] = routing
+
+    if solver == SOLVER_UPPAAL:
+        return solveUPPAAL(sysdict, binLocation)
+    elif solver == SOLVER_Z3:
+        return verify_smt(sysdict, mappings, routing, binLocation)
+    elif solver == SOLVER_BOTH:
+        uppaalanswer = solveUPPAAL(sysdict, binLocation)
+        smtanswer = verify_smt(sysdict, mappings, routing, binLocation)
+
+        if smtanswer == uppaalanswer:
+            msg = "Same answer (smt/uppaal): " + str(smtanswer) + "/" + str(uppaalanswer)
+            print("\t", msg)
+            return smtanswer
+        else:
+            msg = "Different answer (smt/uppaal): " + str(smtanswer) + "/" + str(uppaalanswer)
+            raise Exception(msg)
 
 # Depth == 2
 def inc_idx(idx, counts):
@@ -264,20 +295,20 @@ def generate_routings(sysdict, mappings):
 
 
 # API for verifying allocation
-def VerifyAllocation(sysdict, mapping, verifytaLocation):
+def VerifyAllocation(sysdict, mapping, solver, binLocation):
     routings = generate_routings(sysdict, mapping)
     j = 0
     for routing in routings:
         j += 1
         print('.', end='', flush=True)
         # print("\tRouting " + str(j) + "/" + str(len(routings)))
-        answer = verify(sysdict, mapping, routing, verifytaLocation)
+        answer = verify(sysdict, mapping, routing, solver, binLocation)
         if (answer):
             return routing
     return None
 
 # API For verifying system
-def Verify(sysdict, verifytaLocation):
+def Verify(sysdict, solver, binLocation):
     global checks
     checks = 0
     mappings = generate_mappings(sysdict)
@@ -285,7 +316,7 @@ def Verify(sysdict, verifytaLocation):
     for m in mappings:
         i += 1
         print("Mapping " + str(i) + "/" + str(len(mappings)))
-        r = VerifyAllocation(sysdict, m, verifytaLocation)
+        r = VerifyAllocation(sysdict, m, solver, binLocation)
         if r:
             print("Checks: " + str(checks))
             return (m, r)
