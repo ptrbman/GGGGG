@@ -167,3 +167,11 @@ generate_instance.py
 toolchain.sh
 
 trysmt.py
+
+debug/
+
+genbench.py
+
+*.out
+
+testprio.py

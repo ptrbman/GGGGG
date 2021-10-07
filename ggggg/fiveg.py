@@ -5,20 +5,19 @@
 ### should be updated before model is generated
 
 class VNF:
-    def __init__(self, i, name, uid, BCET=-1, WCET=-1, Prio=-1, Type=''):
+    def __init__(self, i, name, uid, BCET=-1, WCET=-1, Type=''):
         self.i = i
         self.name = name
         self.uid = uid
         self.BCET = BCET
         self.WCET = WCET
-        self.Prio = Prio
         self.Type = Type
 
     def t(self):
-        return "{" + str(self.uid) + ", " + str(self.BCET) + ", " + str(self.WCET) + ", " + str(self.Prio) + "}"
+        return "{" + str(self.uid) + ", " + str(self.BCET) + ", " + str(self.WCET) + "}"
 
     def __str__(self):
-        return "VNF<" + str(self.i) + ", " + str(self.uid) + ", " + str(self.BCET) + ", " + str(self.WCET) + ", " + str(self.Prio) + ", " + str(self.Type) + ">"
+        return "VNF<" + str(self.i) + ", " + str(self.uid) + ", " + str(self.BCET) + ", " + str(self.WCET) + ", " + str(self.Type) + ">"
 
 class Host:
     def __init__(self, i, name, uid, cpu=-1, mem=-1, mec="", capabilities = []):
@@ -82,16 +81,17 @@ class UserEquipment:
         self.subscribedSlice = subscribedSlice
 
 class Slice:
-    def __init__(self, i, name, uid, bw=-1, lat=-1, chainLength=-1):
+    def __init__(self, i, name, uid, bw=-1, lat=-1, chainLength=-1, prio=-1):
         self.i = i
         self.name = name
         self.uid = uid
         self.bw = bw
         self.lat = lat
         self.chainLength = chainLength
+        self.prio = prio;
 
     def t(self):
-        return "{" + str(self.uid) + ", " + str(self.bw) + ", " + str(self.lat) + ", " + str(self.chainLength) + "}"
+        return "{" + str(self.uid) + ", " + str(self.bw) + ", " + str(self.lat) + ", " + str(self.chainLength) + ", " + str(self.prio) + "}"
 
 class RoutingTable:
     def __init__(self, routingtable = []):

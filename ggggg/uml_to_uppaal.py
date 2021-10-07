@@ -201,7 +201,6 @@ def LoadSystem(infile, verbose=False):
     for v in vnfs:
         v.BCET = attr(v.i, 'BCET')
         v.WCET = attr(v.i, 'WCET')
-        v.Prio = attr(v.i, 'Priority')
         v.Type = attr(v.i, 'Type')
 
     for l in links:
@@ -226,6 +225,7 @@ def LoadSystem(infile, verbose=False):
     for s in slices:
         s.bw = attr(s.i, 'BWRequirement')
         s.lat = attr(s.i, 'LatencyRequirement')
+        s.prio = attr(s.i, 'Priority')
 
         vnfsString = attr(s.i, 'VNFs')
         m = re.search("Sequence {(.*)}", vnfsString).group(1).split(',')

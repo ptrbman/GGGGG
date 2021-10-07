@@ -101,6 +101,8 @@ def generate_mappings(sysdict):
     chains = sysdict['Chains']
     alloc = sysdict['Allocation']
 
+
+
     options = []
     optCount = []
     idx = []
@@ -335,7 +337,7 @@ def VerifySingle(sysdict, solver, binLocation):
         raise Exception("No mappings for system")
     mapping = mappings[0]
     routings = generate_routings(sysdict, mapping)
-    routing = routings[1]
+    routing = routings[0]
     answer = verify(sysdict, mapping, routing, solver, binLocation)
     if (answer):
         return (mapping, routing)

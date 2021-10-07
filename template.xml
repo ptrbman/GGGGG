@@ -10,7 +10,6 @@ typedef struct {
     int id;
     int BCET; // Best Case Execution Time
     int WCET; // Worst Case Execution Time
-    int Prio; // Priority
 } vnf;
 
 // Link
@@ -34,6 +33,7 @@ typedef struct {
     int BWReq;
     int LatReq;
     int chainLength;
+    int prio;
 } slice;
 
 
@@ -54,18 +54,19 @@ chan request, reqExe, finExe;
 int lastRequestSliceId;
 int lastRequestMonitorId;
 int lastFinishedMonitorId;
-int MQ[HostCount][QueueLength][2]; // First element contains the id of the VNF, second element the id of the corresponding SliceExecutioner
+int MQ[HostCount][QueueLength][3]; // First element contains the id of the VNF, second element the id of the corresponding SliceExecutioner, third element is Priority
 int [0, QueueLength] len[HostCount]; //Length of the message queues of the host 
 //
 // Functions
 //
 
-void queue(int hostID, int vnfID, int exeID) //Queue Function
+void queue(int hostID, int vnfID, int exeID, int prio) //Queue Function
 {
     if (len[hostID] &lt; QueueLength)
     {
         MQ[hostID][len[hostID]][0] = vnfID;
         MQ[hostID][len[hostID]][1] = exeID;
+        MQ[hostID][len[hostID]][2] = prio;
         len[hostID]++;
 
     }
@@ -144,7 +145,7 @@ void schedule() // Priority-based scheduling
         { 
             if (len[id]&gt;=1)
             {
-                if (vnfs[MQ[id][i][0]].Prio &lt; vnfs[MQ[id][j][0]].Prio)
+                if (MQ[id][i][2] &lt; MQ[id][j][2])
                 {    
                     tmp0 = MQ[id][i][0];
                     tmp1 = MQ[id][i][1];
@@ -287,6 +288,7 @@ clock monitor; // clock to measure the deadline
 int sliceID;
 int sliceInst = 0; // current slice execution instance
 int vnfid = 0; //current vnf id
+int prio = 0; // current priority
 
 int monitorId = -1; // ID of the monitor which requested this Executor
 
@@ -315,6 +317,7 @@ int sliceChain[VNFCount]; // currentSliceChain
 void initialize()
 {
     int i, j;
+    prio = slices[sliceID].prio;
     for (i = 0; i &lt; MaxChainLength; i++) 
     {
         for (j = 0; j &lt; MaxLinkStep; j++)
@@ -336,10 +339,9 @@ void queueVNFtoHost() //Queue the respective vnf to the host where is it allocat
     int nextVNF = sliceChain[step];
        
                 {
-                    queue(AllocV[nextVNF], nextVNF, exeID);
+                    queue(AllocV[nextVNF], nextVNF, exeID, prio);
                     vnfid = nextVNF;
-                    
-
+                 
                 }
 
         
