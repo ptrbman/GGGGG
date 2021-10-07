@@ -312,6 +312,8 @@ def Verify(sysdict, solver, binLocation):
     global checks
     checks = 0
     mappings = generate_mappings(sysdict)
+    if not mappings:
+        raise Exception("No mappings for system")
     i = 0
     for m in mappings:
         i += 1
@@ -322,4 +324,23 @@ def Verify(sysdict, solver, binLocation):
             return (m, r)
     print("Checks: " + str(checks))
     return None
+
+
+# API For verifying system
+def VerifySingle(sysdict, solver, binLocation):
+    global checks
+    checks = 0
+    mappings = generate_mappings(sysdict)
+    if not mappings:
+        raise Exception("No mappings for system")
+    mapping = mappings[0]
+    routings = generate_routings(sysdict, mapping)
+    routing = routings[1]
+    answer = verify(sysdict, mapping, routing, solver, binLocation)
+    if (answer):
+        return (mapping, routing)
+    else:
+        return None
+
+
 
