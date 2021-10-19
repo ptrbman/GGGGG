@@ -35,15 +35,16 @@ class Action():
         return self.prefix + "[" + str(self.ID) + "]"
 
 class HostAction(Action):
-    def __init__(self, host, BCET, WCET):
+    def __init__(self, host, BCET, WCET, prio):
         self.prefix = "H" + str(host.uid)
         self.host = host
         self.BCET = BCET
         self.WCET = WCET
         self.duration = WCET
+        self.prio = prio
 
     def instantiate(self):
-        newAction = HostAction(self.host, self.BCET, self.WCET)
+        newAction = HostAction(self.host, self.BCET, self.WCET, self.prio)
         newAction.setID()
         return newAction
 
@@ -114,7 +115,7 @@ def requests(sysdict, mappings, routings):
     for (s, m, r) in zip(sysdict['Slices'], mappings, routings):
         actions = []
         for (vnf, route) in zip(m.mapping, r.routingtable + [Route(-1)]):
-            hAction = HostAction(sysdict['Allocation'].host(vnf), vnf.BCET, vnf.WCET)
+            hAction = HostAction(sysdict['Allocation'].host(vnf), vnf.BCET, vnf.WCET, s.prio)
             hostActions.append(hAction)
             actions.append(hAction)
             for l in route.route:
@@ -285,7 +286,7 @@ def SMTLinkUrgency(linkActionMap, bandwidthMap):
     return constraints
 
 
-def existsHostAction(hostActions, t, priority):
+def existsHostAction(hostActions, t, startTime, priority):
     if not hostActions:
         return "false"
 
@@ -293,9 +294,11 @@ def existsHostAction(hostActions, t, priority):
     for a in hostActions:
         # This action must be ongoing
         cond1 = inside(t, a)
-        # This action must have higher (or equal) priority
-        cond2 = "(<= " + str(a.zero()) + " " + str(priority) + ")"
-        options += " (and " + cond1 + " " + cond2 + ")"
+        # This action must start at latest at time startTime
+        cond2 = "(<= " + str(a.zero()) + " " + str(startTime) + ")"
+        # This action must have lower (or equal) priority
+        cond3 = "(<= " + str(a.prio) + " " + str(priority) + ")"
+        options += " (and " + cond1 + " " + cond2 + " " + cond3 + ")"
 
     return options + ")"
 
@@ -319,7 +322,7 @@ def SMTScheduling(hostActionMap):
                 and1 = "(<= " + a.zero() + " " + t + ")"
                 and2 = "(< " + t + " " + a.begin() + ")"
                 condition = "(and " + and1 + " " + and2 + ")"
-                exists = existsHostAction(otherActions, t, a.zero())
+                exists = existsHostAction(otherActions, t, a.zero(), a.prio)
                 c = "(=> " + condition + " " + exists + ")"
                 constraints.append(c)
 
