@@ -1,0 +1,102 @@
+!new Host('VM1')
+!VM1.Capabilities := Set {'V1','V2','V3','V4', 'V5'}
+!VM1.MECHost := false
+!VM1.CPUResources := 3500
+!VM1.MemoryResources := 32
+
+!new Host('VM2')
+!VM2.Capabilities := Set {'V1','V2','V3','V4', 'V5'}
+!VM2.MECHost := false
+!VM2.CPUResources := 3500
+!VM2.MemoryResources := 32
+
+!new Host('VM3')
+!VM3.Capabilities := Set {'V1','V2','V3','V4', 'V5'}
+!VM3.MECHost := false
+!VM3.CPUResources := 3500
+!VM3.MemoryResources := 32
+
+!new Host('VM4')
+!VM4.Capabilities := Set {'V1','V2','V3','V4', 'V5'}
+!VM4.MECHost := false
+!VM4.CPUResources := 3500
+!VM4.MemoryResources := 32
+
+
+!insert (VM1,VM2) into Link
+!Link1.Delay := 10
+!Link1.Bandwidth := 500
+
+!insert (VM2,VM2) into Link
+!Link2.Delay := 10
+!Link2.Bandwidth := 500
+
+!insert (VM3,VM4) into Link
+!Link3.Delay := 10
+!Link3.Bandwidth := 500
+
+!insert (VM4,VM1) into Link
+!Link4.Delay := 10
+!Link4.Bandwidth := 500
+
+
+!new VNF('V1')
+!V1.Type := 'V1'
+!V1.BCET := 5
+!V1.WCET := 15
+
+!new VNF('V2')
+!V2.Type := 'V2'
+!V2.BCET := 10
+!V2.WCET := 20
+
+!new VNF('V3')
+!V3.Type := 'V3'
+!V3.BCET := 10
+!V3.WCET := 20
+
+!new VNF('V4')
+!V4.Type := 'V4'
+!V4.BCET := 5
+!V4.WCET := 20
+
+!new VNF('V5')
+!V5.Type := 'V5'
+!V5.BCET := 5
+!V5.WCET := 10
+
+
+!new Slice('Hospital1')
+!Hospital1.VNFs := Sequence {'V1','V2'}
+!Hospital1.BWRequirement := 50
+!Hospital1.LatencyRequirement := 75
+!Hospital1.Priority := 1
+
+!new UserEquipment('Camera1')
+!Camera1.MaxInstantiation :=  1
+!Camera1.ActivationTime := 50
+!insert (Camera1,Hospital1) into Subscription
+
+!new Slice('Video1')
+!Video1.VNFs := Sequence {'V1', 'V3', 'V4', 'V5'}
+!Video1.BWRequirement := 200
+!Video1.LatencyRequirement := 150
+!Video1.Priority := 2
+
+!new UserEquipment('Phone1')
+!Phone1.MaxInstantiation := 1
+!Phone1.ActivationTime := 100
+!insert (Phone1,Video1) into Subscription
+
+!new UserEquipment('Phone2')
+!Phone2.MaxInstantiation := 1
+!Phone2.ActivationTime := 100
+!insert (Phone2,Video1) into Subscription
+
+
+
+!insert (V1,VM1) into Allocation
+!insert (V3,VM1) into Allocation
+!insert (V2,VM2) into Allocation
+!insert (V4,VM3) into Allocation
+!insert (V5,VM4) into Allocation
