@@ -1,0 +1,77 @@
+model FiveGSO
+
+-- classes
+
+class Host
+attributes
+   Capabilities : Set(String)
+   CPUResources : Integer
+   MemoryResources : Integer
+   MECHost : Boolean
+end
+
+class VNF
+attributes
+   Type : String
+   BCET : Integer
+   WCET : Integer
+end
+
+class Slice
+attributes
+   VNFs : Sequence(String)
+   BWRequirement : Integer
+   LatencyRequirement : Integer
+   Priority : Integer
+end
+
+class UserEquipment
+attributes
+  SubscribedSlice : Slice
+  MaxInstantiation : Integer
+  ActivationTime : Integer
+end
+
+----
+----    Links
+----
+
+associationclass Link
+between
+   Host[*] role Start
+   Host[*] role End
+attributes
+   Delay : Integer
+   Bandwidth : Integer
+end
+
+----
+----    Allocations
+----
+
+association Allocation
+between
+   VNF[*] role vnf
+   Host[1] role host 
+end
+
+
+----
+----   Subscriptions 
+----
+
+association Subscription 
+between
+   UserEquipment[*] role ue
+   Slice[1] role slice 
+end
+
+
+
+constraints
+
+
+-- Ensure VNFs are allocated to compatible Hosts
+context VNF
+   inv CompatibleHost:
+      (Allocation.allInstances->select(alloc : Allocation | alloc.vnf = self)->asSequence()->first()).host.Capabilities->includes(self.Type)
